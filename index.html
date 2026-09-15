@@ -185,6 +185,7 @@
 
   .viewbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 12.5px; color: var(--muted); }
   .viewbar label { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  [hidden] { display: none !important; }
   .viewbar select, .viewbar input[type=number] { width: auto; margin: 0; padding: 3px 6px; font-size: 12.5px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .seg button { border: 0; border-radius: 0; padding: 4px 10px; font-size: 12.5px; }
@@ -269,7 +270,7 @@
   <aside>
     <div class="viewbar">
       <label title="How many photos the strip has">photos <input type="number" id="photos" min="1" max="6" value="3" style="width:52px"></label>
-      <label title="Only for this preview — the booth gives every real receipt its own number">order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
+      <label id="order-field" title="Only for this preview — the booth gives every real receipt its own number">order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
       <label title="What fills the photo slots while you design. Drop your own pictures below to see those instead.">preview photos <select id="photo_set"><option value="placeholder">sample pictures</option></select></label>
       <label title="Make the preview bigger on screen. Does not change the printed size.">zoom <span class="seg" id="scale"><button type="button" data-v="1" aria-pressed="true">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="3">3×</button></span></label>
       <label title="“dots” shows the exact black-and-white pattern sent to the print head. “paper” shows the same thing on thermal paper, where the dots bloom a little. Preview only — neither changes what prints.">show as <span class="seg" id="look"><button type="button" data-v="dots" aria-pressed="true">crisp dots</button><button type="button" data-v="paper">on paper</button></span></label>
@@ -938,7 +939,8 @@ function loadSet(id) {
 function renderSets() {
   const ul = $("set-list"); if (!ul) return;
   $("set-empty").hidden = sets.length > 0;
-  ul.innerHTML = sets.map(x => {
+  const newestFirst = [...sets].sort((a, b) => String(b.saved || "").localeCompare(String(a.saved || "")));
+  ul.innerHTML = newestFirst.map(x => {
     const when = new Date(x.saved); const t = isNaN(when) ? "" : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     const mm = x.rows ? `${Math.round(x.rows / DPMM)} mm · ` : "";
     return `<li class="${x.id === currentId ? "current" : ""}" data-id="${x.id}">
@@ -1201,7 +1203,7 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
     btn.title = `Send this receipt to ${who}, who puts it on the printer`;
 
     if (new URLSearchParams(location.search).get("github") !== "1") {
-      for (const id of ["copy-json", "download-png"]) if ($(id)) $(id).hidden = true;
+      for (const id of ["copy-json", "download-png", "order-field"]) if ($(id)) $(id).hidden = true;
       const d = document.querySelector("aside:not(.palette) details");   // the receipt.json drawer
       if (d) d.hidden = true;
     }
