@@ -183,7 +183,10 @@
   .tile .v small { font-size: 12px; color: var(--muted); font-family: "Archivo", sans-serif; margin-left: 3px; }
   .tile .n { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
-  .viewbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 12.5px; color: var(--muted); }
+  .viewbar { display: flex; flex-wrap: nowrap; gap: 8px 13px; align-items: center; font-size: 12.5px; color: var(--muted); overflow-x: auto; }
+  .viewbar > * { flex: 0 0 auto; }
+  .viewbar select { max-width: 150px; }
+  @media (max-width: 700px) { .viewbar { flex-wrap: wrap; overflow-x: visible; } }
   .viewbar label { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--ink); }
   [hidden] { display: none !important; }
   .viewbar select, .viewbar input[type=number] { width: auto; margin: 0; padding: 3px 6px; font-size: 12.5px; }
@@ -271,7 +274,7 @@
     <div class="viewbar">
       <label title="How many photos the strip has">photos <input type="number" id="photos" min="1" max="6" value="3" style="width:52px"></label>
       <label id="order-field" title="Only for this preview — the booth gives every real receipt its own number">order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
-      <label title="What fills the photo slots while you design. Drop your own pictures below to see those instead.">preview photos <select id="photo_set"><option value="placeholder">sample pictures</option></select></label>
+      <label title="What fills the photo slots while you design. Drop your own pictures below to see those instead.">showing <select id="photo_set"><option value="placeholder">sample pictures</option></select></label>
       <label title="Make the preview bigger on screen. Does not change the printed size.">zoom <span class="seg" id="scale"><button type="button" data-v="1" aria-pressed="true">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="3">3×</button></span></label>
       <label title="“dots” shows the exact black-and-white pattern sent to the print head. “paper” shows the same thing on thermal paper, where the dots bloom a little. Preview only — neither changes what prints.">show as <span class="seg" id="look"><button type="button" data-v="dots" aria-pressed="true">crisp dots</button><button type="button" data-v="paper">on paper</button></span></label>
     </div>
