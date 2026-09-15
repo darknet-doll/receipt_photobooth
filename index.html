@@ -250,7 +250,7 @@
     <section class="sets" id="sets">
       <h2>Saved receipts</h2>
       <div class="sets-row">
-        <input type="text" id="set-name" placeholder="name this iteration, e.g. dotted rules, big header" maxlength="60">
+        <input type="text" id="set-name" placeholder="name your receipt, e.g. tea party" maxlength="60">
         <button type="button" class="primary" id="set-save">Save</button>
         <button type="button" id="set-new">Save as new</button>
       </div>
@@ -1302,13 +1302,13 @@ if (GH && !(window.claude && window.claude.use)) {
       }
       incoming.sort((a, b) => String(a.saved || "").localeCompare(String(b.saved || "")));
       const { added, updated } = ghAdopt(incoming);
-      if (!quiet || added || updated) {
+      if (ghOwnerMode && (!quiet || added || updated)) {
         st.textContent = added || updated ? `From GitHub: ${added} new, ${updated} updated.`
           : `Up to date with GitHub (${incoming.length} set${incoming.length === 1 ? "" : "s"}).`;
         st.className = "ok";
       }
     } catch (e) {
-      if (!quiet) { st.textContent = "Could not read the repo: " + (e.message || e); st.className = "warn"; }
+      if (!quiet && ghOwnerMode) { st.textContent = "Could not read the repo: " + (e.message || e); st.className = "warn"; }
     }
   };
   $("gh-reload").onclick = () => ghLoad(false);
