@@ -925,15 +925,18 @@ function snapshot(name) {
     settings: collect(), photos: Number($("photos").value || 3), number: Number($("number").value || 0),
     rows: last ? last.rows : null, saved: new Date().toISOString() };
 }
+let sendReceipt = null;                     // set on the public page: then saving also sends
 function saveSet() {                        // every save is a new entry - nothing is ever overwritten
   const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
-  const name = $("set-name").value.trim() || (cur ? cur.name : `Receipt ${sets.length + 1}`);
+  const name = $("set-name").value.trim() || (cur ? cur.name : "") ||
+    String(collect().shop || "").replace(/[^\w &'-]/g, "").trim() || `Receipt ${sets.length + 1}`;
   const snap = snapshot(name);
   sets.push(snap); currentId = snap.id;
   setDirty = false; persistSets(); dbPut(snap);
   $("set-name").value = name;
-  $("status").textContent = `Saved "${name}".`; $("status").className = "ok";
   renderSets();
+  if (sendReceipt) { sendReceipt(snap); return; }        // it reports its own progress
+  $("status").textContent = `Saved "${name}".`; $("status").className = "ok";
 }
 function loadSet(id) {
   const x = sets.find(y => y.id === id); if (!x) return;
@@ -1196,31 +1199,29 @@ if (location.protocol === "file:") {
     }
   };
 }
-// ---- send by email: the visitor has no GitHub and no Claude account, so Save just sends -----
-// The form key lives in config.json beside the page. It only ever lets a submission reach the
-// owner's inbox, so it is safe in a public repo in a way a GitHub token would not be.
+// ---- the public page: one button that saves AND sends ---------------------------------
+// The visitor has no GitHub and no Claude account, so Save is the whole journey: it files the
+// receipt in her list and posts it to the Google Form named in config.json. Both config values
+// are public by design - a form endpoint only accepts submissions and hands nothing back.
 if (location.protocol.startsWith("http") && !(window.claude && window.claude.use)) {
   fetch("config.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).then(cfg => {
     const form = cfg && cfg.google_form_id, field = cfg && cfg.google_form_field;
-    if (!form || !field) return;                         // not configured yet: leave the button hidden
+    if (!form || !field) return;                         // not configured: saving stays local
     const who = (cfg && cfg.owner_label) || "the booth owner";
-    const btn = $("send-mail");
-    btn.hidden = false;
-    btn.title = `Send this receipt to ${who}, who puts it on the printer`;
 
     if (new URLSearchParams(location.search).get("github") !== "1") {
       for (const id of ["copy-json", "download-png", "order-field"]) if ($(id)) $(id).hidden = true;
       const d = document.querySelector("aside:not(.palette) details");   // the receipt.json drawer
       if (d) d.hidden = true;
     }
+    $("send-mail").hidden = true;                        // folded into Save, so never shown
+    const save = $("set-save");
+    save.textContent = "Save & send";
+    save.title = `Keep this receipt and send it to ${who}, who puts it on the booth`;
 
-    btn.onclick = async () => {
+    sendReceipt = async set => {
       const st = $("status");
-      const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
-      const name = $("set-name").value.trim() || (cur ? cur.name : "") ||
-        String(collect().shop || "").replace(/[^\w &'-]/g, "").trim() || "Untitled receipt";
-      const set = snapshot(name);              // a send is a save-as-new as well, never an overwrite
-      btn.disabled = true;
+      save.disabled = true;
       st.textContent = "Sending…"; st.className = "";
       try {
         // Google Forms sends no CORS headers, so this is a no-cors post: it either leaves the
@@ -1232,16 +1233,12 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
             fvv: "1", pageHistory: "0"
           })
         });
-        // keep it in this browser too, so she can pick it up again and carry on
-        currentId = set.id; setDirty = false; $("set-name").value = name;
-        sets.push(set);
-        persistSets(); renderSets();
-        st.innerHTML = `<b>${esc(name)}</b> is being sent to update the booth! Keep tweaking, then save whenever you like!`;
+        st.innerHTML = `<b>${esc(set.name)}</b> is being sent to update the booth! Keep tweaking, then save whenever you like!`;
         st.className = "ok";
       } catch (e) {
-        st.innerHTML = `Could not send it: ${esc(String(e.message || e))}. Your work is safe in this browser — try again in a moment, or use <b>Export all</b> and send the file instead.`;
+        st.innerHTML = `Could not send it: ${esc(String(e.message || e))}. It is still saved on this device — press <b>Save & send</b> again in a moment, or use <b>Export all</b> and send the file instead.`;
         st.className = "warn";
-      } finally { btn.disabled = false; }
+      } finally { save.disabled = false; }
     };
   }).catch(() => {});
 }
@@ -1266,7 +1263,7 @@ if (GH && !(window.claude && window.claude.use)) {
   $("save-github").hidden = !ghOwnerMode; $("gh-reload").hidden = !ghOwnerMode;
   $("sets-where").innerHTML = ghOwnerMode
     ? `Saved sets live in <b>${esc(GH.owner + "/" + GH.repo)}</b> under <code>sets/</code>, so everyone opening this page sees them. Save to GitHub fills in the commit for you.`
-    : `Click one to load it, change whatever you like, then press <b>Send my receipt</b>.`;
+    : `Click one to load it, change whatever you like, then press <b>Save &amp; send</b>.`;
 
   // newest file wins per id, so re-saving a set under the same name updates it
   const ghAdopt = incoming => {
