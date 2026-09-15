@@ -84,7 +84,10 @@
     text-wrap: balance;
   }
   header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
-  .specs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); grid-column: 1 / -1; }
+  .specs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+  .specsheet { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .specsheet-h { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+  .specsheet .specs { margin-top: 12px; }
   .specs b { color: var(--ink); font-weight: 600; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -217,8 +220,8 @@
 <body>
 <header>
   <div>
-    <h1>GP-58 Tape Bench</h1>
-    <div class="sub">Dot-for-dot simulation of what the CSN-A4L / Gprinter GP-58 puts on the roll. Same layout engine as the booth, no Pi required.</div>
+    <h1>Design your receipt!</h1>
+    <div class="sub">Change the text, title, number of photos below, then save and send!</div>
   </div>
   <div class="actions">
     <button id="preset-receipt">Preset: receipt</button>
@@ -229,16 +232,6 @@
     <button id="save-github" hidden title="Write the current iteration into the repo this page is served from, as a commit you confirm on GitHub">Save to GitHub</button>
     <button id="download-png" title="The 384-dot raster, exactly what goes to the head">Download PNG</button>
     <button class="primary" id="copy-json">Copy receipt.json</button>
-  </div>
-  <div class="specs">
-    <span><b>384</b> dots / line</span>
-    <span><b>8</b> dots / mm</span>
-    <span><b>48 mm</b> printable on <b>57 mm</b> paper</span>
-    <span><b>25 – 70</b> mm / s</span>
-    <span>ESC/POS <b>GS v 0</b> raster, 48 bytes / row</span>
-    <span>USB <b>0fe6:811e</b> → /dev/usb/lp0</span>
-    <span>roll ≈ <b>10 m</b>, ≤ 30 mm dia</span>
-    <span>DC <b>5 – 9 V</b>, ≥ 1.5 A while printing</span>
   </div>
 </header>
 
@@ -275,19 +268,12 @@
   </div>
 
   <aside>
-    <div class="readouts">
-      <div class="tile"><div class="k">Paper</div><div class="v mono" id="r-mm">—<small>mm</small></div><div class="n" id="r-rows">rows</div></div>
-      <div class="tile"><div class="k">Print time</div><div class="v mono" id="r-time">—<small>s</small></div><div class="n">at 25 – 70 mm/s</div></div>
-      <div class="tile"><div class="k">Per roll</div><div class="v mono" id="r-roll">—</div><div class="n">receipts on 10 m</div></div>
-      <div class="tile"><div class="k">Coverage</div><div class="v mono" id="r-ink">—<small>%</small></div><div class="n" id="r-bytes">bytes of raster</div></div>
-    </div>
-
     <div class="viewbar">
-      <label>photos <input type="number" id="photos" min="1" max="6" value="3" style="width:52px"></label>
-      <label>order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
-      <label>sample <select id="photo_set"><option value="placeholder">synthetic placeholders</option></select></label>
-      <span class="seg" id="scale"><button type="button" data-v="1" aria-pressed="true">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="3">3×</button></span>
-      <span class="seg" id="look"><button type="button" data-v="dots" aria-pressed="true">dots</button><button type="button" data-v="paper">paper</button></span>
+      <label title="How many photos the strip has">photos <input type="number" id="photos" min="1" max="6" value="3" style="width:52px"></label>
+      <label title="Only for this preview — the booth gives every real receipt its own number">order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
+      <label title="What fills the photo slots while you design. Drop your own pictures below to see those instead.">preview photos <select id="photo_set"><option value="placeholder">sample pictures</option></select></label>
+      <label title="Make the preview bigger on screen. Does not change the printed size.">zoom <span class="seg" id="scale"><button type="button" data-v="1" aria-pressed="true">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="3">3×</button></span></label>
+      <label title="“dots” shows the exact black-and-white pattern sent to the print head. “paper” shows the same thing on thermal paper, where the dots bloom a little. Preview only — neither changes what prints.">show as <span class="seg" id="look"><button type="button" data-v="dots" aria-pressed="true">crisp dots</button><button type="button" data-v="paper">on paper</button></span></label>
     </div>
 
     <div class="drop" id="drop">
@@ -319,6 +305,26 @@
       </div>
       <textarea id="json" class="mono" spellcheck="false"></textarea>
     </details>
+
+    <div class="specsheet">
+      <h2 class="specsheet-h">What this will print</h2>
+    <div class="readouts">
+      <div class="tile"><div class="k">Paper</div><div class="v mono" id="r-mm">—<small>mm</small></div><div class="n" id="r-rows">rows</div></div>
+      <div class="tile"><div class="k">Print time</div><div class="v mono" id="r-time">—<small>s</small></div><div class="n">at 25 – 70 mm/s</div></div>
+      <div class="tile"><div class="k">Per roll</div><div class="v mono" id="r-roll">—</div><div class="n">receipts on 10 m</div></div>
+      <div class="tile"><div class="k">Coverage</div><div class="v mono" id="r-ink">—<small>%</small></div><div class="n" id="r-bytes">bytes of raster</div></div>
+    </div>
+      <div class="specs">
+    <span><b>384</b> dots / line</span>
+    <span><b>8</b> dots / mm</span>
+    <span><b>48 mm</b> printable on <b>57 mm</b> paper</span>
+    <span><b>25 – 70</b> mm / s</span>
+    <span>ESC/POS <b>GS v 0</b> raster, 48 bytes / row</span>
+    <span>USB <b>0fe6:811e</b> → /dev/usb/lp0</span>
+    <span>roll ≈ <b>10 m</b>, ≤ 30 mm dia</span>
+    <span>DC <b>5 – 9 V</b>, ≥ 1.5 A while printing</span>
+  </div>
+    </div>
   </aside>
 </main>
 
@@ -1127,7 +1133,7 @@ function addFiles(files) {
 }
 function refreshSets() {
   const sel = $("photo_set"), cur = sel.value;
-  sel.innerHTML = `<option value="placeholder">synthetic placeholders</option>` + (uploads.length ? `<option value="uploads">your photos (${uploads.length})</option>` : "");
+  sel.innerHTML = `<option value="placeholder">sample pictures</option>` + (uploads.length ? `<option value="uploads">your photos (${uploads.length})</option>` : "");
   sel.value = [...sel.options].some(o => o.value === cur) ? cur : "placeholder";
 }
 $("clear-uploads").onclick = e => { e.stopPropagation(); uploads = []; refreshSets(); render(); };
