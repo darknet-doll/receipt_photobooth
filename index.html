@@ -1272,7 +1272,7 @@ if (GH && !(window.claude && window.claude.use)) {
     }
     ghAdopt([set]); currentId = set.id; setDirty = false; $("set-name").value = name; persistSets(); renderSets();
     window.open(url, "_blank", "noopener");
-    st.innerHTML = `GitHub is open in a new tab with <code>${esc(path)}</code> filled in — press <b>Commit changes</b> there and it is saved. Without write access GitHub offers a pull request instead, which works just as well.`;
+    st.innerHTML = `GitHub is open in a new tab with <code>${esc(path)}</code> filled in — leave <b>Commit directly to the ${GH.branch} branch</b> selected and press <b>Commit changes</b>. If GitHub only offers a pull request, your invite to the repo has not been accepted yet.`;
     st.className = "ok";
   };
 }

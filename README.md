@@ -14,8 +14,12 @@ what you see is what the paper gets.
    The preview redraws as you type.
 3. Put a name in the box (keep the same name to update an existing set) and press
    **Save to GitHub**.
-4. GitHub opens in a new tab with the file already filled in. Press **Commit changes**.
-   If you do not have write access GitHub offers a pull request instead — that works too.
+4. GitHub opens in a new tab with the file already filled in. Leave **Commit directly to the
+   `main` branch** selected and press **Commit changes**. Done — the set is saved for everyone.
+
+You need a (free) GitHub account and an accepted invite to this repo. If GitHub offers you a
+pull request instead of a direct commit, the invite has not been accepted yet — check your
+email, accept it, and try again.
 
 That is the whole loop. Each save is a new timestamped file in [`sets/`](sets/); the newest
 file for a given set wins, so nothing is ever overwritten and every version stays in history.
