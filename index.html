@@ -252,7 +252,6 @@
       <div class="sets-row">
         <input type="text" id="set-name" placeholder="name your receipt, e.g. tea party" maxlength="60">
         <button type="button" class="primary" id="set-save">Save</button>
-        <button type="button" id="set-new">Save as new</button>
       </div>
       <ul class="set-list" id="set-list"></ul>
       <div class="empty" id="set-empty">Nothing saved yet. Design a receipt, give it a name, and press Save.</div>
@@ -919,16 +918,14 @@ function snapshot(name) {
     settings: collect(), photos: Number($("photos").value || 3), number: Number($("number").value || 0),
     rows: last ? last.rows : null, saved: new Date().toISOString() };
 }
-function saveSet(asNew) {
-  const typed = $("set-name").value.trim();
-  const cur = !asNew && currentId != null ? sets.find(x => x.id === currentId) : null;
-  const name = typed || (cur ? cur.name : `Iteration ${sets.length + 1}`);
+function saveSet() {                        // every save is a new entry - nothing is ever overwritten
+  const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
+  const name = $("set-name").value.trim() || (cur ? cur.name : `Receipt ${sets.length + 1}`);
   const snap = snapshot(name);
-  if (cur) Object.assign(cur, snap, { id: cur.id });
-  else { sets.push(snap); currentId = snap.id; }
-  setDirty = false; persistSets(); dbPut(cur || snap);
+  sets.push(snap); currentId = snap.id;
+  setDirty = false; persistSets(); dbPut(snap);
   $("set-name").value = name;
-  $("status").textContent = cur ? `Updated "${name}".` : `Saved "${name}".`; $("status").className = "ok";
+  $("status").textContent = `Saved "${name}".`; $("status").className = "ok";
   renderSets();
 }
 function loadSet(id) {
@@ -950,9 +947,8 @@ function renderSets() {
       <button type="button" class="small" data-act="del" title="Delete">delete</button></li>`;
   }).join("");
 }
-$("set-save").onclick = () => saveSet(false);
-$("set-new").onclick = () => saveSet(true);
-$("set-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveSet(false); } });
+$("set-save").onclick = () => saveSet();
+$("set-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveSet(); } });
 $("set-list").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const li = b.closest("li"), id = li.dataset.id, i = sets.findIndex(x => x.id === id);
@@ -1215,8 +1211,7 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
       const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
       const name = $("set-name").value.trim() || (cur ? cur.name : "") ||
         String(collect().shop || "").replace(/[^\w &'-]/g, "").trim() || "Untitled receipt";
-      const set = snapshot(name);
-      if (cur) set.id = cur.id;
+      const set = snapshot(name);              // a send is a save-as-new as well, never an overwrite
       btn.disabled = true;
       st.textContent = "Sending…"; st.className = "";
       try {
@@ -1231,7 +1226,7 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
         });
         // keep it in this browser too, so she can pick it up again and carry on
         currentId = set.id; setDirty = false; $("set-name").value = name;
-        if (!sets.some(x => x.id === set.id)) sets.push(set); else Object.assign(sets.find(x => x.id === set.id), set);
+        sets.push(set);
         persistSets(); renderSets();
         st.innerHTML = `<b>${esc(name)}</b> is being sent to update the booth! Keep tweaking, then save whenever you like!`;
         st.className = "ok";
@@ -1319,8 +1314,7 @@ if (GH && !(window.claude && window.claude.use)) {
     const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
     const name = $("set-name").value.trim() || (cur ? cur.name : "");
     if (!name) { st.textContent = "Name the iteration first, then Save to GitHub."; st.className = "warn"; $("set-name").focus(); return; }
-    const set = snapshot(name);
-    if (cur) set.id = cur.id;                                   // same id = an update of that set, not a rival
+    const set = snapshot(name);                                 // always a new entry, never an overwrite
     const path = `sets/${slug(name)}-${stamp(new Date())}.json`;
     const base = `https://github.com/${GH.owner}/${GH.repo}/new/${GH.branch}?filename=${encodeURIComponent(path)}&value=`;
     let url = base + encodeURIComponent(JSON.stringify({ tape_bench_sets: [set] }, null, 2));
