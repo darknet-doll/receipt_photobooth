@@ -237,7 +237,7 @@
 
 <main>
   <aside class="palette" id="chars">
-    <h1>Characters the Pi prints</h1>
+    <h1>Characters you can use</h1>
     <div class="chars-head">
       <input type="text" id="char-search" placeholder="filter: star, heart, 2665…">
       <span class="seg" id="char-size"><button type="button" data-v="24" aria-pressed="true">24 dots</button><button type="button" data-v="16">16 dots</button></span>
@@ -248,14 +248,14 @@
   </aside>
   <div class="left">
     <section class="sets" id="sets">
-      <h2>Iterations</h2>
+      <h2>Saved receipts</h2>
       <div class="sets-row">
         <input type="text" id="set-name" placeholder="name this iteration, e.g. dotted rules, big header" maxlength="60">
         <button type="button" class="primary" id="set-save">Save</button>
         <button type="button" id="set-new">Save as new</button>
       </div>
       <ul class="set-list" id="set-list"></ul>
-      <div class="empty" id="set-empty">Nothing saved yet. Set up the receipt, name it, and press Save. Each iteration keeps the copy, rules, layout, photo count and order number.</div>
+      <div class="empty" id="set-empty">Nothing saved yet. Design a receipt, give it a name, and press Save.</div>
       <div class="sets-io">
         <button type="button" class="small" id="sets-export">Export all</button>
         <button type="button" class="small" id="sets-import">Import</button>
@@ -1204,6 +1204,12 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
     btn.hidden = false;
     btn.title = `Send this receipt to ${who}, who puts it on the printer`;
 
+    if (new URLSearchParams(location.search).get("github") !== "1") {
+      for (const id of ["copy-json", "download-png"]) if ($(id)) $(id).hidden = true;
+      const d = document.querySelector("aside:not(.palette) details");   // the receipt.json drawer
+      if (d) d.hidden = true;
+    }
+
     btn.onclick = async () => {
       const st = $("status");
       const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
@@ -1255,7 +1261,9 @@ if (GH && !(window.claude && window.claude.use)) {
 
   const ghOwnerMode = new URLSearchParams(location.search).get("github") === "1";
   $("save-github").hidden = !ghOwnerMode; $("gh-reload").hidden = !ghOwnerMode;
-  $("sets-where").innerHTML = `Saved sets live in <b>${esc(GH.owner + "/" + GH.repo)}</b> under <code>sets/</code>, so everyone opening this page sees them. Save to GitHub fills in the commit for you.`;
+  $("sets-where").innerHTML = ghOwnerMode
+    ? `Saved sets live in <b>${esc(GH.owner + "/" + GH.repo)}</b> under <code>sets/</code>, so everyone opening this page sees them. Save to GitHub fills in the commit for you.`
+    : `Click one to load it, change whatever you like, then press <b>Send my receipt</b>.`;
 
   // newest file wins per id, so re-saving a set under the same name updates it
   const ghAdopt = incoming => {
