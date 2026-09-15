@@ -1221,7 +1221,7 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
         currentId = set.id; setDirty = false; $("set-name").value = name;
         if (!sets.some(x => x.id === set.id)) sets.push(set); else Object.assign(sets.find(x => x.id === set.id), set);
         persistSets(); renderSets();
-        st.innerHTML = `Sent — <b>${esc(name)}</b> is on its way to ${esc(who)}, who will put it on the booth. Keep tweaking and send again whenever you like. (If it never turns up, use <b>Export all</b> and send the file instead.)`;
+        st.innerHTML = `<b>${esc(name)}</b> is being sent to update the booth! Keep tweaking, then save whenever you like!`;
         st.className = "ok";
       } catch (e) {
         st.innerHTML = `Could not send it: ${esc(String(e.message || e))}. Your work is safe in this browser — try again in a moment, or use <b>Export all</b> and send the file instead.`;
