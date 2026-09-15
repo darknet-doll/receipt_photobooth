@@ -1,4 +1,4 @@
-# GP-58 Tape Bench
+# Receipt Photobooth
 
 A dot-for-dot simulator of the receipt the photobooth prints on its GP-58 thermal head —
 384 dots a line, 8 dots a millimetre, 48 mm of ink on 57 mm paper. Design a receipt here and
