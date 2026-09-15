@@ -1,5 +1,6 @@
 {
-  "_note": "form_key is a Web3Forms access key. It only lets a submission reach the owner's inbox, so it is safe in a public repo. Empty = the Send button stays hidden.",
-  "form_key": "",
+  "_note": "The Google Form the Send button posts to. Both values are public by design — a form response endpoint accepts submissions and gives nothing back, so there is no secret here to leak.",
+  "google_form_id": "1FAIpQLSdUGemtooerxf__DEwGfyDDFXZCf5ksvGYVHcQ0R33XCUFEvQ",
+  "google_form_field": "entry.1646234690",
   "owner_label": "darknetdoll"
 }

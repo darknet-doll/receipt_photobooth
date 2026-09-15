@@ -33,14 +33,15 @@ The page is one file, `index.html`, and it behaves differently depending on wher
 
 | Opened from | Saving goes to |
 | --- | --- |
-| GitHub Pages | emailed to you, via the form key in `config.json` |
+| GitHub Pages | a Google Form, collected in its linked Sheet |
 | GitHub Pages with `?github=1` | a commit in this repo, under `sets/` |
 | the Claude artifact | the artifact's shared database |
 | a local `file://` copy | the browser, plus **Send to booth** → Receipt Studio on the Pi |
 
-`config.json` holds the Web3Forms access key. It is public on purpose: the key only lets a
-submission reach your inbox, which is why this works where a GitHub token never could. Leave
-`form_key` empty and the Send button simply stays hidden.
+`config.json` names the Google Form the Send button posts to. Both values are public on purpose:
+a form response endpoint only accepts submissions and returns nothing, so unlike a GitHub or
+Airtable token there is no secret in the page to steal. Clear the values and the Send button
+simply stays hidden. Responses collect in the form's linked Sheet.
 
 The source of truth is `software/tools/tape_bench.html` in the Photobooth project; `index.html`
 here is a copy. Don't edit it by hand — run `software/tools/deploy_bench_site.sh`, which

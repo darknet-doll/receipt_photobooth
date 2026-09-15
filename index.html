@@ -1191,8 +1191,8 @@ if (location.protocol === "file:") {
 // owner's inbox, so it is safe in a public repo in a way a GitHub token would not be.
 if (location.protocol.startsWith("http") && !(window.claude && window.claude.use)) {
   fetch("config.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).then(cfg => {
-    const key = cfg && cfg.form_key;
-    if (!key) return;                                    // not configured yet: leave the button hidden
+    const form = cfg && cfg.google_form_id, field = cfg && cfg.google_form_field;
+    if (!form || !field) return;                         // not configured yet: leave the button hidden
     const who = (cfg && cfg.owner_label) || "the booth owner";
     const btn = $("send-mail");
     btn.hidden = false;
@@ -1208,25 +1208,20 @@ if (location.protocol.startsWith("http") && !(window.claude && window.claude.use
       btn.disabled = true;
       st.textContent = "Sending…"; st.className = "";
       try {
-        const r = await fetch("https://api.web3forms.com/submit", {
-          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            access_key: key,
-            subject: `Tape Bench receipt: ${name}`,
-            from_name: "Tape Bench",
-            botcheck: "",
-            receipt_name: name,
-            note: `${set.photos} photo${set.photos === 1 ? "" : "s"}, about ${set.rows ? Math.round(set.rows / DPMM) : "?"} mm of paper.`,
-            message: JSON.stringify({ tape_bench_sets: [set] }, null, 2)
+        // Google Forms sends no CORS headers, so this is a no-cors post: it either leaves the
+        // browser or it throws. We cannot read a confirmation back, hence the wording below.
+        await fetch(`https://docs.google.com/forms/d/e/${form}/formResponse`, {
+          method: "POST", mode: "no-cors",
+          body: new URLSearchParams({
+            [field]: JSON.stringify({ tape_bench_sets: [set] }, null, 2),
+            fvv: "1", pageHistory: "0"
           })
         });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok || j.success === false) throw new Error(j.message || ("the form service said " + r.status));
         // keep it in this browser too, so she can pick it up again and carry on
         currentId = set.id; setDirty = false; $("set-name").value = name;
         if (!sets.some(x => x.id === set.id)) sets.push(set); else Object.assign(sets.find(x => x.id === set.id), set);
         persistSets(); renderSets();
-        st.innerHTML = `Sent — <b>${esc(name)}</b> is on its way to ${esc(who)}, who will put it on the booth. You can keep tweaking and send again.`;
+        st.innerHTML = `Sent — <b>${esc(name)}</b> is on its way to ${esc(who)}, who will put it on the booth. Keep tweaking and send again whenever you like. (If it never turns up, use <b>Export all</b> and send the file instead.)`;
         st.className = "ok";
       } catch (e) {
         st.innerHTML = `Could not send it: ${esc(String(e.message || e))}. Your work is safe in this browser — try again in a moment, or use <b>Export all</b> and send the file instead.`;
