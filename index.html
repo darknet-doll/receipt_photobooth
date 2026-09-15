@@ -1,0 +1,1285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GP-58 Tape Bench</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87.5,400;87.5,500;87.5,600;87.5,700;100,400;100,500;100,600&family=Cousine:wght@400;700&display=swap">
+<style>
+  :root {
+    --ground: #ebe7ee;
+    --panel: #ffffff;
+    --panel-2: #f6f3f7;
+    --ink: #241b28;
+    --muted: #6f6376;
+    --line: #d9d1dd;
+    --accent: #f34fae;
+    --accent-ink: #b5207a;
+    --accent-soft: #fde4f1;
+    --ok: #288c5a;
+    --warn: #b2621a;
+    --paper: #fbfaf5;
+    --paper-ink: #141114;
+    --bench: #d8d2db;
+    --shadow: 0 10px 30px rgba(36, 27, 40, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1b1520;
+      --panel: #261d2c;
+      --panel-2: #2f2536;
+      --ink: #f1eaf2;
+      --muted: #a99cb0;
+      --line: #3f3347;
+      --accent: #f34fae;
+      --accent-ink: #ff86cb;
+      --accent-soft: #3c2236;
+      --ok: #5fc48f;
+      --warn: #e0954a;
+      --bench: #14101a;
+      --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1b1520;
+    --panel: #261d2c;
+    --panel-2: #2f2536;
+    --ink: #f1eaf2;
+    --muted: #a99cb0;
+    --line: #3f3347;
+    --accent: #f34fae;
+    --accent-ink: #ff86cb;
+    --accent-soft: #3c2236;
+    --ok: #5fc48f;
+    --warn: #e0954a;
+    --bench: #14101a;
+    --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 14px/1.45 "Archivo", "Helvetica Neue", Arial, sans-serif;
+    font-stretch: 100%;
+  }
+  .mono { font-family: "Cousine", "DejaVu Sans Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 24px;
+    align-items: end;
+    padding: 18px 24px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    font-stretch: 87.5%;
+    letter-spacing: .5px;
+    text-wrap: balance;
+  }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .specs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); grid-column: 1 / -1; }
+  .specs b { color: var(--ink); font-weight: 600; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+  button {
+    font: inherit; font-weight: 500;
+    padding: 7px 13px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { background: var(--panel-2); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(.95); }
+  button.small { padding: 3px 9px; font-size: 12px; }
+
+  main {
+    display: grid;
+    grid-template-columns: 252px minmax(340px, 460px) 1fr;
+    gap: 18px;
+    padding: 20px 24px 40px;
+    align-items: start;
+  }
+  @media (max-width: 1250px) { main { grid-template-columns: minmax(340px, 480px) 1fr; } .palette { grid-column: 1 / -1; position: static !important; max-height: 300px; } }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static !important; } }
+
+  .left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .palette { position: sticky; top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 14px; max-height: calc(100vh - 32px); overflow: auto; }
+  .palette h1 { font-size: 13px; margin: 0 0 8px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .chars-head { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+  .chars-head input { width: 100%; margin: 0; }
+  .chars-head .seg { align-self: flex-start; }
+  #char-target { color: var(--accent-ink); font-weight: 600; }
+  .chars-note { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+  .palette details { border: 0; border-radius: 0; padding: 0; background: transparent; margin-top: 10px; }
+  .palette summary { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .palette summary small { letter-spacing: 0; text-transform: none; font-weight: 400; }
+  .cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 3px; margin-top: 6px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 3px; border: 1px solid transparent; border-radius: 6px; background: transparent; cursor: pointer; position: relative; }
+  .cell:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .cell .g { background-color: #fff; background-repeat: no-repeat; image-rendering: pixelated; border-radius: 3px; }
+  .cell .t { font-family: "Cousine", "DejaVu Sans Mono", Menlo, monospace; font-size: 11px; color: var(--muted); }
+  .cell.faint .g { outline: 1px dashed var(--warn); outline-offset: -1px; }
+  .cell.faint::after { content: "16"; position: absolute; top: 2px; right: 3px; font-size: 9px; color: var(--warn); font-weight: 700; }
+  .cell.hit { border-color: var(--accent); }
+  form { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px 18px 18px; }
+  .sets { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px 14px; }
+  .sets h2 { margin-top: 0; }
+  .sets-row { display: flex; gap: 8px; align-items: center; }
+  .sets-row input { margin: 0; flex: 1; }
+  .sets-row button { white-space: nowrap; }
+  .set-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .set-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; padding: 4px 6px 4px 8px; border-radius: 6px; border: 1px solid transparent; }
+  .set-list li.current { background: var(--accent-soft); border-color: var(--accent); }
+  .set-list .load { text-align: left; border: 0; background: transparent; padding: 3px 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .set-list .load b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .set-list .load small { color: var(--muted); font-size: 11.5px; }
+  .set-list li.current .load small { color: var(--accent-ink); }
+  .sets-io { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .empty { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  h2 {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--muted); margin: 22px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
+  }
+  label { display: block; margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+  label small { color: var(--muted); opacity: .8; }
+  label.check { display: flex; align-items: center; gap: 8px; color: var(--ink); margin-top: 12px; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%; margin-top: 3px;
+    font: 13.5px/1.35 "Cousine", "DejaVu Sans Mono", Menlo, monospace;
+    padding: 6px 8px;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: var(--panel-2); color: var(--ink);
+  }
+  textarea { resize: vertical; min-height: 56px; }
+  input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  .multi .check { margin-top: 6px; font-size: 12.5px; }
+  .multi .check b { font-weight: 600; }
+  .multi .check small { color: var(--muted); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .hint { font-size: 12px; color: var(--muted); background: var(--panel-2); border-radius: 8px; padding: 8px 10px; margin-top: 14px; line-height: 1.5; }
+  .hint code { font-family: "Cousine", monospace; font-size: 12px; background: var(--ground); padding: 0 4px; border-radius: 3px; }
+
+  aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .readouts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 1200px) { .readouts { grid-template-columns: repeat(2, 1fr); } }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; min-width: 0; }
+  .tile .k { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .tile .v { font-size: 22px; font-weight: 500; margin-top: 2px; white-space: nowrap; }
+  .tile .v small { font-size: 12px; color: var(--muted); font-family: "Archivo", sans-serif; margin-left: 3px; }
+  .tile .n { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .viewbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 12.5px; color: var(--muted); }
+  .viewbar label { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  .viewbar select, .viewbar input[type=number] { width: auto; margin: 0; padding: 3px 6px; font-size: 12.5px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 4px 10px; font-size: 12.5px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+
+  .drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+
+  .bench {
+    background: var(--bench);
+    border-radius: 10px;
+    padding: 18px 16px;
+    max-height: calc(100vh - 230px);
+    overflow: auto;
+  }
+  .bench .stage { display: flex; gap: 6px; align-items: flex-start; width: max-content; margin: 0 auto; }
+  .bench canvas { display: block; }
+  #paper { box-shadow: var(--shadow); }
+  #status { min-height: 18px; font-size: 12.5px; color: var(--muted); }
+  .glyphs { font-size: 12.5px; line-height: 1.5; color: var(--warn); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .glyphs .chars { font-family: "Cousine", "DejaVu Sans Mono", Menlo, monospace; font-size: 15px; color: var(--ink); background: var(--panel-2); padding: 0 5px; border-radius: 4px; }
+  .glyphs .soft { color: var(--muted); }
+  #status.ok { color: var(--ok); font-weight: 600; }
+  #status.warn { color: var(--warn); font-weight: 600; }
+
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details textarea { min-height: 150px; font-size: 12px; margin-top: 8px; }
+  details .bar { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>GP-58 Tape Bench</h1>
+    <div class="sub">Dot-for-dot simulation of what the CSN-A4L / Gprinter GP-58 puts on the roll. Same layout engine as the booth, no Pi required.</div>
+  </div>
+  <div class="actions">
+    <button id="preset-receipt">Preset: receipt</button>
+    <button id="preset-birthday">Preset: birthday</button>
+    <button id="reset-draft" title="Forget the draft saved in this browser">Discard draft</button>
+    <button id="send-booth" hidden title="POST the current receipt to Receipt Studio on the Pi, which saves it as ~/photobooth/receipt.json">Send to booth</button>
+    <button id="save-github" hidden title="Write the current iteration into the repo this page is served from, as a commit you confirm on GitHub">Save to GitHub</button>
+    <button id="download-png" title="The 384-dot raster, exactly what goes to the head">Download PNG</button>
+    <button class="primary" id="copy-json">Copy receipt.json</button>
+  </div>
+  <div class="specs">
+    <span><b>384</b> dots / line</span>
+    <span><b>8</b> dots / mm</span>
+    <span><b>48 mm</b> printable on <b>57 mm</b> paper</span>
+    <span><b>25 – 70</b> mm / s</span>
+    <span>ESC/POS <b>GS v 0</b> raster, 48 bytes / row</span>
+    <span>USB <b>0fe6:811e</b> → /dev/usb/lp0</span>
+    <span>roll ≈ <b>10 m</b>, ≤ 30 mm dia</span>
+    <span>DC <b>5 – 9 V</b>, ≥ 1.5 A while printing</span>
+  </div>
+</header>
+
+<main>
+  <aside class="palette" id="chars">
+    <h1>Characters the Pi prints</h1>
+    <div class="chars-head">
+      <input type="text" id="char-search" placeholder="filter: star, heart, 2665…">
+      <span class="seg" id="char-size"><button type="button" data-v="24" aria-pressed="true">24 dots</button><button type="button" data-v="16">16 dots</button></span>
+      <span id="char-target">click into a receipt text field, then click a character to insert it</span>
+    </div>
+    <div id="char-cats"></div>
+    <div class="chars-note">Each glyph was rendered on the Pi with the receipt font and thresholded like a print, so this is what the paper gets. A dashed box marked <b>16</b> goes faint at the 16-dot small-text size: use it in a bigger line or pick a filled variant. Every click also copies the character.</div>
+  </aside>
+  <div class="left">
+    <section class="sets" id="sets">
+      <h2>Iterations</h2>
+      <div class="sets-row">
+        <input type="text" id="set-name" placeholder="name this iteration, e.g. dotted rules, big header" maxlength="60">
+        <button type="button" class="primary" id="set-save">Save</button>
+        <button type="button" id="set-new">Save as new</button>
+      </div>
+      <ul class="set-list" id="set-list"></ul>
+      <div class="empty" id="set-empty">Nothing saved yet. Set up the receipt, name it, and press Save. Each iteration keeps the copy, rules, layout, photo count and order number.</div>
+      <div class="sets-io">
+        <button type="button" class="small" id="sets-export">Export all</button>
+        <button type="button" class="small" id="sets-import">Import</button>
+        <input type="file" id="sets-file" accept=".json,application/json" hidden>
+        <button type="button" class="small" id="gh-reload" hidden title="Re-read the sets/ folder in the repo">Reload from GitHub</button>
+        <span id="sets-where">Kept in this browser only. Export to carry them to another machine or the Pi.</span>
+      </div>
+    </section>
+    <form id="form" autocomplete="off" onsubmit="return false"></form>
+  </div>
+
+  <aside>
+    <div class="readouts">
+      <div class="tile"><div class="k">Paper</div><div class="v mono" id="r-mm">—<small>mm</small></div><div class="n" id="r-rows">rows</div></div>
+      <div class="tile"><div class="k">Print time</div><div class="v mono" id="r-time">—<small>s</small></div><div class="n">at 25 – 70 mm/s</div></div>
+      <div class="tile"><div class="k">Per roll</div><div class="v mono" id="r-roll">—</div><div class="n">receipts on 10 m</div></div>
+      <div class="tile"><div class="k">Coverage</div><div class="v mono" id="r-ink">—<small>%</small></div><div class="n" id="r-bytes">bytes of raster</div></div>
+    </div>
+
+    <div class="viewbar">
+      <label>photos <input type="number" id="photos" min="1" max="6" value="3" style="width:52px"></label>
+      <label>order # <input type="number" id="number" min="0" max="9999" value="47" style="width:66px"></label>
+      <label>sample <select id="photo_set"><option value="placeholder">synthetic placeholders</option></select></label>
+      <span class="seg" id="scale"><button type="button" data-v="1" aria-pressed="true">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="3">3×</button></span>
+      <span class="seg" id="look"><button type="button" data-v="dots" aria-pressed="true">dots</button><button type="button" data-v="paper">paper</button></span>
+    </div>
+
+    <div class="drop" id="drop">
+      <span>Drop photos here to preview with your own pictures (kept in this tab only)</span>
+      <button type="button" class="small" id="clear-uploads">clear</button>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+
+    <div id="status">Fonts loading…</div>
+    <div id="glyphs" class="glyphs" hidden></div>
+
+    <div class="bench">
+      <div class="stage">
+        <canvas id="ruler"></canvas>
+        <canvas id="paper"></canvas>
+      </div>
+    </div>
+
+    <details>
+      <summary>receipt.json for the booth</summary>
+      <div class="bar">
+        <span>This is what the Photobooth app reads from <span class="mono">~/photobooth/receipt.json</span> at start-up. Paste a saved file here to load it.</span>
+        <button type="button" class="small" id="load-json">Load pasted JSON</button>
+      </div>
+      <div class="bar" id="booth-bar" hidden>
+        <span>Receipt Studio on the Pi:</span>
+        <input type="text" id="booth-url" value="http://raspberrypi.local:8765" style="width:260px;margin:0" spellcheck="false">
+        <span>Send to booth posts there; the booth prints it from the next session on.</span>
+      </div>
+      <textarea id="json" class="mono" spellcheck="false"></textarea>
+    </details>
+  </aside>
+</main>
+
+<script>
+// ---- printer constants (HARDWARE.md, booth/printer.py) ----------------------
+const WIDTH = 384, DPMM = 8, PAPER_MM = 57, ROLL_MM = 10000, SPEED = [25, 70], BAND_ROWS = 128;
+const PAPER_PX = PAPER_MM * DPMM;                 // 456 dots of paper, 384 of them printable
+const PAPER_OFF = Math.round((PAPER_PX - WIDTH) / 2);
+const FONT = '"Cousine", "DejaVu Sans Mono", Menlo, monospace';
+
+const $ = id => document.getElementById(id);
+const form = $("form");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ---- presets (booth/receipt.py) -----------------------------------------------
+const RECEIPT = {
+  width: WIDTH, margin: 12, photo_aspect: [4, 3], photo_border: 2, dither: true, torn_edges: true,
+  shop: "PHOTO BOOTH CO.", shop_tracking: 4, address: ["123 CAPTURE LANE, UNIT 4", "EST. 2026"],
+  meta: [["DATE {date:%m/%d/%Y}", "TIME {date:%-I:%M %p}"], ["REG 02", "TXN #{txn:04d}"]],
+  table_header: ["QTY ITEM", "PRICE"], photos_as_items: true,
+  photo_items: ["GOOD TIMES", "YOUR BEST SIDE", "THE GOOFY ONE", "ONE MORE TAKE"],
+  photo_item_qty: "1", photo_item_price: "INCL", items: [],
+  totals: [["SUBTOTAL", "{n} FRAMES"], ["DISCOUNT (SMILE)", "-0.00"], ["TAX", "0.00"]],
+  total: ["TOTAL", "PRICELESS"],
+  barcode: "{date:%y%m%d}{txn:04d}", barcode_caption: "*{txn:04d} {date:%Y %m%d}*",
+  footer: ["THANK YOU FOR VISITING", "*** PLEASE COME AGAIN ***"], fine_print: "NO REFUNDS ON CANDID MOMENTS",
+  rules: ["header", "photos", "table_top", "table_bottom", "items", "total"],
+  rule_style: "dashed", rule_thickness: 2, rule_dash: 6, rule_gap: 4, rule_pad: 8, rule_text: "- ",
+  size_shop: 30, size_small: 16, size_body: 18, size_total: 26, size_fine: 14,
+};
+const RULE_SLOTS = [
+  ["header", "below the shop header"],
+  ["photos", "below stacked photos (photos not as line items)"],
+  ["table_top", "above the QTY ITEM PRICE header"],
+  ["table_bottom", "below the QTY ITEM PRICE header"],
+  ["items", "below the line items, above the totals"],
+  ["total", "above the big TOTAL line"],
+  ["footer", "above the thank-you footer"],
+  ["barcode", "above the barcode"],
+];
+const RULE_STYLES = [["dashed", "dashed  – – – –"], ["dotted", "dotted  · · · ·"], ["solid", "solid  ————"], ["double", "double  ════"], ["text", "text pattern (repeated)"]];
+const BIRTHDAY = Object.assign({}, RECEIPT, {
+  shop: "DARKNETDOLL'S BIRTHDAY SHOP", shop_tracking: 2, size_shop: 24, address: [],
+  meta: [["Guest:", "Best Friend"], ["Date:", "{date:%B %-d, %Y}"]],
+  table_header: null, photos_as_items: false,
+  items: [["1  Amazing Friendship", "$0.00"], ["99 Great Memories", "$0.00"], ["   Birthday Wishes", "PRICELESS"]],
+  totals: [["SUBTOTAL", "LOVE"], ["TAX", "100%"]], total: ["TOTAL", "ONE HUG"],
+  footer: ["Thank you for being here!", "", "Order #{txn:04d}", "NO RETURNS * FRIENDS FOREVER"],
+  fine_print: null, barcode: "{txn:04d}", barcode_caption: "* birthday barcode *",
+});
+const PRESETS = { receipt: RECEIPT, birthday: BIRTHDAY };
+const PHOTO_DEFAULT = { receipt: 3, birthday: 1 };
+
+// Code 39: 9 elements per character (bar, space, bar, ...), 1 = wide.
+const CODE39 = {
+  "0": "000110100", "1": "100100001", "2": "001100001", "3": "101100000", "4": "000110001", "5": "100110000",
+  "6": "001110000", "7": "000100101", "8": "100100100", "9": "001100100", "A": "100001001", "B": "001001001",
+  "C": "101001000", "D": "000011001", "E": "100011000", "F": "001011000", "G": "000001101", "H": "100001100",
+  "I": "001001100", "J": "000011100", "K": "100000011", "L": "001000011", "M": "101000010", "N": "000010011",
+  "O": "100010010", "P": "001010010", "Q": "000000111", "R": "100000110", "S": "001000110", "T": "000010110",
+  "U": "110000001", "V": "011000001", "W": "111000000", "X": "010010001", "Y": "110010000", "Z": "011010000",
+  "-": "010000101", ".": "110000100", " ": "011000100", "$": "010101000", "/": "010100010", "+": "010001010",
+  "%": "000101010", "*": "010010100",
+};
+
+// ---- placeholders: {date:%m/%d/%Y} {txn:04d} {n} ----------------------------
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+function strftime(d, fmt) {
+  return fmt.replace(/%(-?)([A-Za-z%])/g, (m, dash, c) => {
+    const pad = (n, w = 2) => dash ? String(n) : String(n).padStart(w, "0");
+    switch (c) {
+      case "Y": return d.getFullYear();
+      case "y": return pad(d.getFullYear() % 100);
+      case "m": return pad(d.getMonth() + 1);
+      case "d": return pad(d.getDate());
+      case "H": return pad(d.getHours());
+      case "I": return pad(d.getHours() % 12 || 12);
+      case "M": return pad(d.getMinutes());
+      case "S": return pad(d.getSeconds());
+      case "p": return d.getHours() < 12 ? "AM" : "PM";
+      case "B": return MONTHS[d.getMonth()];
+      case "b": return MONTHS[d.getMonth()].slice(0, 3);
+      case "A": return DAYS[(d.getDay() + 6) % 7];
+      case "a": return DAYS[(d.getDay() + 6) % 7].slice(0, 3);
+      case "%": return "%";
+      default: return m;
+    }
+  });
+}
+function fill(text, ctx) {
+  return String(text).replace(/\{(date|txn|n)(?::([^}]*))?\}/g, (m, key, spec) => {
+    if (key === "date") return spec ? strftime(ctx.date, spec) : strftime(ctx.date, "%Y-%m-%d %H:%M:%S");
+    const v = key === "txn" ? ctx.txn : ctx.n;
+    const w = spec && spec.match(/^0?(\d+)d$/);
+    return w ? String(v).padStart(Number(w[1]), spec.startsWith("0") ? "0" : " ") : String(v);
+  });
+}
+
+// ---- image prep (booth/strip.py prepare_photo) ---------------------------------
+function autocontrast(gray, cutoff = 1) {         // Float32Array in place, 1% clipped at each end
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < gray.length; i++) hist[gray[i] | 0]++;
+  const cut = Math.floor(gray.length * cutoff / 100);
+  let lo = 0, hi = 255, acc = 0;
+  for (; lo < 255; lo++) { acc += hist[lo]; if (acc > cut) break; }
+  acc = 0;
+  for (; hi > 0; hi--) { acc += hist[hi]; if (acc > cut) break; }
+  if (hi <= lo) return gray;
+  const scale = 255 / (hi - lo);
+  for (let i = 0; i < gray.length; i++) gray[i] = Math.max(0, Math.min(255, (gray[i] - lo) * scale));
+  return gray;
+}
+function floydSteinberg(gray, w, h) {            // returns Uint8Array, 1 = black
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, old = gray[i], nv = old < 128 ? 0 : 255, err = old - nv;
+    out[i] = nv === 0 ? 1 : 0;
+    if (x + 1 < w) gray[i + 1] += err * 7 / 16;
+    if (y + 1 < h) {
+      if (x > 0) gray[i + w - 1] += err * 3 / 16;
+      gray[i + w] += err * 5 / 16;
+      if (x + 1 < w) gray[i + w + 1] += err * 1 / 16;
+    }
+  }
+  return out;
+}
+function preparePhoto(src, w, h, dither) {       // src: canvas/image; centre-crop to w:h, grayscale, autocontrast, dither
+  const sw = src.width, sh = src.height;
+  let cw = sw, ch = Math.round(sw * h / w);
+  if (ch > sh) { ch = sh; cw = Math.round(sh * w / h); }
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data;
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) gray[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  autocontrast(gray);
+  if (dither) return floydSteinberg(gray, w, h);
+  const out = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) out[i] = gray[i] < 128 ? 1 : 0;
+  return out;
+}
+
+// synthetic 4:3 "photo": tones, edges and a big label, like receipt_studio.placeholder_photo
+const placeholders = [];
+function placeholder(i) {
+  if (placeholders[i]) return placeholders[i];
+  const w = 800, h = 600, c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d"), img = g.createImageData(w, h), d = img.data;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const v = 130 + 90 * Math.sin(x / 140 + i) * Math.cos(y / 110 - i), p = (y * w + x) * 4;
+    d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  g.fillStyle = "#ebebeb"; g.strokeStyle = "#0f0f0f"; g.lineWidth = 5;
+  g.beginPath(); g.ellipse(400, 260, 150, 150, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = "#0f0f0f";
+  g.beginPath(); g.ellipse(340, 230, 20, 20, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(460, 230, 20, 20, 0, 0, Math.PI * 2); g.fill();
+  g.lineWidth = 8; g.beginPath();
+  g.ellipse(400, 315, 80, 55, 0, (15 + 30 * i) * Math.PI / 180, (165 - 30 * i) * Math.PI / 180); g.stroke();
+  g.fillStyle = "#191919"; g.fillRect(40, 470, 720, 100);
+  g.fillStyle = "#f5f5f5"; g.font = `700 56px ${FONT}`; g.textBaseline = "middle";
+  g.fillText(`SAMPLE PHOTO ${i + 1}`, 70, 520);
+  placeholders[i] = c;
+  return c;
+}
+
+// ---- the tape: receipt.py _Tape in canvas ---------------------------------------
+class Tape {
+  constructor(width, margin) {
+    this.width = width; this.margin = margin; this.inner = width - 2 * margin;
+    this.c = document.createElement("canvas"); this.c.width = width; this.c.height = 4000;
+    this.g = this.c.getContext("2d", { willReadFrequently: true });
+    this.g.fillStyle = "#fff"; this.g.fillRect(0, 0, width, 4000);
+    this.y = 0;
+  }
+  ensure(rows) {
+    if (this.y + rows <= this.c.height) return;
+    const n = document.createElement("canvas"); n.width = this.width; n.height = this.c.height + Math.max(rows, 2000);
+    const ng = n.getContext("2d", { willReadFrequently: true });
+    ng.fillStyle = "#fff"; ng.fillRect(0, 0, n.width, n.height); ng.drawImage(this.c, 0, 0);
+    this.c = n; this.g = ng;
+  }
+  space(rows) { this.ensure(rows); this.y += rows; }
+  font(size, bold) { return { css: `${bold ? 700 : 400} ${size}px ${FONT}`, size }; }
+  metrics(font) {
+    this.g.font = font.css;
+    const m = this.g.measureText("Hg");
+    const asc = m.fontBoundingBoxAscent, desc = m.fontBoundingBoxDescent;
+    if (asc == null || desc == null) return { asc: Math.round(font.size * 0.93), desc: Math.round(font.size * 0.24) };
+    return { asc: Math.round(asc), desc: Math.round(desc) };
+  }
+  lineHeight(font) { const m = this.metrics(font); return m.asc + m.desc; }
+  textWidth(text, font, tracking = 0) {
+    this.g.font = font.css;
+    if (!tracking) return Math.floor(this.g.measureText(text).width);
+    let w = 0;
+    for (const ch of text) w += Math.floor(this.g.measureText(ch).width) + tracking;
+    return w - tracking;
+  }
+  drawText(x, text, font, tracking = 0) {
+    this.g.font = font.css; this.g.fillStyle = "#000"; this.g.textBaseline = "alphabetic";
+    const base = this.y + this.metrics(font).asc;
+    if (!tracking) { this.g.fillText(text, x, base); return; }
+    for (const ch of text) { this.g.fillText(ch, x, base); x += Math.floor(this.g.measureText(ch).width) + tracking; }
+  }
+  centered(text, font, tracking = 0, gap = 2) {
+    const h = this.lineHeight(font); this.ensure(h + gap);
+    const w = this.textWidth(text, font, tracking);
+    this.drawText(this.margin + Math.floor((this.inner - w) / 2), text, font, tracking);
+    this.y += h + gap;
+  }
+  headline(text, size, bold, tracking, minSize, gap = 4) {
+    let font = this.font(size, bold);
+    while (this.textWidth(text, font, tracking) > this.inner && (size > minSize || tracking > 0)) {
+      if (tracking > 0) tracking -= 1; else { size -= 1; font = this.font(size, bold); }
+    }
+    if (this.textWidth(text, font, tracking) <= this.inner || !text.includes(" ")) { this.centered(text, font, tracking, gap); return; }
+    const words = text.split(/\s+/);
+    let best = 1, bestDiff = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const diff = Math.abs(words.slice(0, i).join(" ").length - words.slice(i).join(" ").length);
+      if (diff < bestDiff) { bestDiff = diff; best = i; }
+    }
+    this.centered(words.slice(0, best).join(" "), font, tracking, gap);
+    this.centered(words.slice(best).join(" "), font, tracking, gap);
+  }
+  row(left, right, font, gap = 2) {
+    const h = this.lineHeight(font); this.ensure(h + gap);
+    const rw = this.textWidth(right, font);
+    const room = this.inner - rw - this.textWidth(" ", font);
+    while (left && this.textWidth(left, font) > room) left = left.slice(0, -1);
+    this.drawText(this.margin, left, font);
+    this.drawText(this.margin + this.inner - rw, right, font);
+    this.y += h + gap;
+  }
+  rule(style = "dashed", thickness = 2, dash = 6, gap = 4, pad = 8, text = "- ", font = null) {
+    thickness = Math.max(1, thickness); dash = Math.max(1, dash); gap = Math.max(0, gap); pad = Math.max(0, pad);
+    const right = this.margin + this.inner;
+    if (style === "text") {
+      font = font || this.font(16);
+      const unit = text || "-", w = Math.max(1, this.textWidth(unit, font));
+      let line = unit.repeat(Math.max(1, Math.floor(this.inner / w))).replace(/\s+$/, "");
+      while (line && this.textWidth(line, font) > this.inner) line = line.slice(0, -1);
+      this.space(pad); this.centered(line, font, 0, pad);
+      return;
+    }
+    const lines = style === "double" ? 2 : 1;
+    this.ensure(thickness * lines + gap * (lines - 1) + 2 * pad);
+    const y0 = this.y + pad;
+    this.g.fillStyle = "#000";
+    for (let k = 0; k < lines; k++) {
+      const yy = y0 + k * (thickness + gap);
+      if (style === "solid" || style === "double") { this.g.fillRect(this.margin, yy, this.inner, thickness); continue; }
+      const step = style === "dotted" ? thickness : dash;
+      for (let x = this.margin; x < right; x += step + gap) this.g.fillRect(x, yy, Math.min(x + step, right) - x, thickness);
+    }
+    this.y += thickness * lines + gap * (lines - 1) + 2 * pad;
+  }
+  zigzag(tooth = 12, height = 7, pad = 4) {
+    this.ensure(height + 2 * pad + 1);
+    const y0 = this.y + pad;
+    this.g.strokeStyle = "#000"; this.g.lineWidth = 2; this.g.lineJoin = "miter"; this.g.beginPath();
+    let up = true, first = true;
+    for (let x = this.margin; x <= this.margin + this.inner; x += tooth, up = !up) {
+      const py = (up ? y0 : y0 + height) + 0.5;
+      if (first) { this.g.moveTo(x + 0.5, py); first = false; } else this.g.lineTo(x + 0.5, py);
+    }
+    this.g.stroke();
+    this.y += height + 2 * pad + 1;
+  }
+  photo(src, aspect, border, dither, gap = 6) {
+    const w = this.inner, h = Math.round(w * aspect[1] / aspect[0]);
+    this.ensure(h + gap);
+    const tw = w - 2 * border, th = h - 2 * border;
+    const bits = preparePhoto(src, tw, th, dither);
+    if (border) { this.g.fillStyle = "#000"; this.g.fillRect(this.margin, this.y, w, h); }
+    const img = this.g.createImageData(tw, th), d = img.data;
+    for (let i = 0; i < tw * th; i++) { const v = bits[i] ? 0 : 255; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+    this.g.putImageData(img, this.margin + border, this.y + border);
+    this.y += h + gap;
+  }
+  barcode(payload, height = 44, narrow = 2, wide = 5, gap = 4) {
+    payload = [...payload.toUpperCase()].filter(ch => CODE39[ch] && ch !== "*").join("");
+    if (!payload) return;
+    const code = `*${payload}*`;
+    let pattern = [];
+    [...code].forEach((ch, i) => {
+      [...CODE39[ch]].forEach((bit, j) => pattern.push([j % 2 === 0, bit === "1" ? wide : narrow]));
+      if (i < code.length - 1) pattern.push([false, narrow]);
+    });
+    let total = pattern.reduce((a, p) => a + p[1], 0);
+    if (total > this.inner) {
+      const wideN = pattern.filter(p => p[1] === wide).length;
+      const w2 = Math.max(narrow + 1, Math.floor((this.inner - (total - wideN * wide)) / Math.max(wideN, 1)));
+      pattern = pattern.map(([b, w]) => [b, w !== narrow ? w2 : narrow]);
+      total = pattern.reduce((a, p) => a + p[1], 0);
+    }
+    this.ensure(height + gap);
+    let x = this.margin + Math.floor((this.inner - total) / 2);
+    this.g.fillStyle = "#000";
+    for (const [bar, w] of pattern) { if (bar) this.g.fillRect(x, this.y, w, height); x += w; }
+    this.y += height + gap;
+  }
+  finish() {                                   // -> { bits: Uint8Array (1 = black), rows }
+    const rows = this.y, d = this.g.getImageData(0, 0, this.width, rows).data;
+    const bits = new Uint8Array(this.width * rows);
+    let black = 0;
+    for (let i = 0; i < bits.length; i++) { const v = d[i * 4] < 128 ? 1 : 0; bits[i] = v; black += v; }
+    return { bits, rows, black };
+  }
+}
+
+function makeReceipt(photos, s, when, number) {
+  const n = photos.length;
+  const ctx = { date: when, txn: number, n };
+  const f = t => fill(t, ctx);
+  const t = new Tape(s.width, s.margin);
+  const small = t.font(s.size_small), body = t.font(s.size_body), bodyBold = t.font(s.size_body, true);
+  const totalFont = t.font(s.size_total, true), fine = t.font(s.size_fine);
+  const rule = slot => { if (s.rules.includes(slot)) t.rule(s.rule_style, s.rule_thickness, s.rule_dash, s.rule_gap, s.rule_pad, s.rule_text, small); };
+
+  t.space(s.margin);
+  if (s.torn_edges) { t.zigzag(); t.space(8); }
+
+  t.headline(f(s.shop), s.size_shop, true, s.shop_tracking, s.size_body);
+  for (const line of s.address) t.centered(f(line), small, 1, 0);
+  rule("header");
+
+  for (const [l, r] of s.meta) t.row(f(l), f(r), body);
+
+  const photoRows = () => photos.forEach((p, i) => {
+    if (s.photos_as_items) {
+      const name = s.photo_items.length ? s.photo_items[i % s.photo_items.length] : `PHOTO ${i + 1}`;
+      t.row(`${s.photo_item_qty}  ${f(name)}`, f(s.photo_item_price), body);
+      t.space(4);
+    }
+    t.photo(p, s.photo_aspect, s.photo_border, s.dither, i < n - 1 ? 14 : 4);
+  });
+
+  if (!s.photos_as_items) { t.space(10); photoRows(); rule("photos"); }
+  if (s.table_header) { rule("table_top"); t.row(f(s.table_header[0]), f(s.table_header[1]), bodyBold); rule("table_bottom"); t.space(2); }
+  if (s.photos_as_items) photoRows();
+  for (const [l, r] of s.items) t.row(f(l), f(r), body);
+  rule("items");
+
+  for (const [l, r] of s.totals) t.row(f(l), f(r), body);
+  if (s.total) { rule("total"); t.row(f(s.total[0]), f(s.total[1]), totalFont, 4); }
+
+  t.space(10);
+  rule("footer");
+  s.footer.forEach((line, i) => {
+    if (line) t.centered(f(line), i === 0 ? bodyBold : small, 1);
+    else t.space(6);
+  });
+  if (s.barcode) {
+    t.space(10); rule("barcode"); t.barcode(f(s.barcode));
+    if (s.barcode_caption) t.centered(f(s.barcode_caption), fine, 2);
+  }
+  if (s.fine_print) { t.space(8); t.centered(f(s.fine_print), fine, 1); }
+  if (s.torn_edges) { t.space(6); t.zigzag(); }
+  t.space(s.margin);
+  return t.finish();
+}
+
+// ---- what the Pi can print: fontconfig charsets captured from the Pi on 2026-09-06 ---------
+// PI_MONO = DejaVu Sans Mono (the receipt face); PI_ANY = every font on the Pi (per-glyph fallback).
+const PI_MONO = "20-7e a0-1c3 1cd-1e3 1e6-1f0 1f4-1f6 1f8-1f9 1fc-221 224-241 243-245 24c-24d 250-2b9 2bb-2c1 2c6-2c9 2cc-2d3 2d6-2de 2e0-2e9 2ee 2f3 300-33f 343 358 361 374-377 37a-37f 384-38a 38c 38e-3a1 3a3-3ce 3d0-3e1 3f0-45f 462-463 472-473 490-49b 4a2-4a5 4aa-4b3 4ba-4bb 4c0-4c4 4c7-4c8 4cb-4cc 4cf-4f9 510-511 51a-51d 531-556 559-55f 561-587 589-58a 606-607 609-60a 60c 615 61b 61f 621-63a 640-655 65a 660-66d 674 679-67b 67e-680 683-684 686-687 691 698 6a4 6a9 6af 6be 6cc 6f0-6f9 e3f e81-e82 e84 e87-e88 e8a e8d e94-e97 e99-e9f ea1-ea3 ea5 ea7 eaa-eab ead-eb9 ebb-ebc ec8-ecd 10d0-10fc 1d02 1d08-1d09 1d14 1d16-1d17 1d1d-1d1f 1d2c-1d2e 1d30-1d3c 1d3e-1d5b 1d62-1d65 1d77-1d78 1d7b 1d85 1d9b-1db7 1db9-1dbf 1e00-1e13 1e18-1e2d 1e30-1e4d 1e54-1e63 1e68-1e79 1e7c-1e99 1e9b 1e9f-1ea1 1eac-1ead 1eb0-1eb1 1eb6-1eb9 1ebc-1ebd 1ec6-1ec7 1eca-1ecd 1ed8-1edd 1ee0-1ee5 1ee8-1eeb 1eee-1ef5 1ef8-1ef9 1f00-1f15 1f18-1f1d 1f20-1f45 1f48-1f4d 1f50-1f57 1f59 1f5b 1f5d 1f5f-1f7d 1f80-1fb4 1fb6-1fc4 1fc6-1fd3 1fd6-1fdb 1fdd-1fef 1ff2-1ff4 1ff6-1ffe 2000-200a 2010-2023 2026 202f-2037 2039-203a 203c-203f 2045-2049 204b 205f 2070-2071 2074-208e 2090-209c 20a0-20b5 20b8-20ba 20bd 2102 2105 210d-210f 2115-2117 2119-211a 211d 2122 2124 2126 212a-212b 212e 2148 2150-2151 2153-215f 2189 2190-2213 2215 2217-2220 2223 2227-222d 2234-223d 2241-2269 226d-228b 228d-22a5 22b2-22b5 22b8 22c2-22c6 22cd-22d1 22da-22e9 22ef 2300-2306 2308-2315 2318-2319 231c-2321 2325-2328 232b 2335-237a 237d 2380-2383 2388-238b 2395 239b-23ae 23ce-23cf 2423 2500-262f 2638-268b 2690-269c 26a0-26a1 26b0-26b1 2701-2704 2706-2709 270c-2727 2729-274b 274d 274f-2752 2756 2758-275e 2761-2775 2794 2798-27af 27b1-27be 27c2 27c5-27c6 27dc 27e0 27e6-27eb 27f5-27f7 2987-2988 2997-2998 29eb 29fa-29fb 2a00 2a2f 2a6a-2a6b 2b05-2b0d 2b12-2b1a 2c64 2c6d-2c70 2c75-2c77 2c79-2c7a 2c7c-2c7f 2e18 2e1f 2e22-2e25 2e2e a708-a716 a71b-a71f a722-a727 a789-a78e a790-a791 a7aa a7f8-a7f9 f6c5 fb01-fb02 fb52-fb81 fb8a-fb95 fb9e-fb9f fbaa-fbad fbe8-fbe9 fbfc-fbff fe70-fe74 fe76-fefc feff fff9-fffd 1d55a 1d670-1d6a3 1d7f6-1d7ff";
+const PI_ANY = "20-7e 80-8d a0-377 37a-37f 384-38a 38c 38e-3a1 3a3-52f 531-556 559-55f 561-587 589-58a 58f 591-5c7 5d0-5ea 5f0-5f4 600-61c 61e-70d 70f-74a 74d-7b1 7c0-7e7 7eb-7f5 7f8-7fa 8a0-8b4 8b6-8bd 8d3 8d5-8d9 8e0-983 985-98c 98f-990 993-9a8 9aa-9b0 9b2 9b6-9b9 9bc-9c4 9c7-9c8 9cb-9ce 9d7 9dc-9dd 9df-9e3 9e6-9fd a01-a03 a05-a0a a0f-a10 a13-a28 a2a-a30 a32-a33 a35-a36 a38-a39 a3c a3e-a42 a47-a48 a4b-a4d a51 a59-a5c a5e a66-a75 a81-a83 a85-a8d a8f-a91 a93-aa8 aaa-ab0 ab2-ab3 ab5-ab9 abc-ac5 ac7-ac9 acb-acd ad0 ae0-ae3 ae6-af1 af9-aff b01-b03 b05-b0c b0f-b10 b13-b28 b2a-b30 b32-b33 b35-b39 b3c-b44 b47-b48 b4b-b4d b56-b57 b5c-b5d b5f-b63 b66-b77 b82-b83 b85-b8a b8e-b90 b92-b95 b99-b9a b9c b9e-b9f ba3-ba4 ba8-baa bae-bb9 bbe-bc2 bc6-bc8 bca-bcd bd0 bd7 be6-bfa c80-c83 c85-c8c c8e-c90 c92-ca8 caa-cb3 cb5-cb9 cbc-cc4 cc6-cc8 cca-ccd cd5-cd6 cde ce0-ce3 ce6-cef cf1-cf2 d00-d03 d05-d0c d0e-d10 d12-d44 d46-d48 d4a-d4f d54-d63 d66-d7f d82-d83 d85-d96 d9a-db1 db3-dbb dbd dc0-dc6 dca dcf-dd4 dd6 dd8-ddf de6-def df2-df4 e01-e3a e3f-e5b e81-e82 e84 e87-e88 e8a e8d e94-e97 e99-e9f ea1-ea3 ea5 ea7 eaa-eab ead-eb9 ebb-ebd ec0-ec4 ec6 ec8-ecd ed0-ed9 edc-edd 10a0-10c5 10d0-1112 1114-1115 111c-111e 1120 1122-1123 1127 1129 112b-112f 1132 1136 1140 1147 114c 1157-1159 1184-1185 1188 1191-1192 1194 119e 11a1 11a8-11c2 11c7-11c8 11cc 11ce 11d3 11d7 11d9 11dc-11dd 11df 11e2 11e6-11e8 11ea-11eb 11ee 11f0-11f2 11f4 11f9 1200-1248 124a-124d 1250-1256 1258 125a-125d 1260-1288 128a-128d 1290-12b0 12b2-12b5 12b8-12be 12c0 12c2-12c5 12c8-12d6 12d8-1310 1312-1315 1318-135a 135d-137c 13a0-13f5 13f8-13fd 1400-169c 16a0-16f8 1720-1736 18b0-18f5 1950-196d 1970-1974 1a00-1a1b 1a1e-1a1f 1ab0-1ac0 1c80-1c88 1cd0-1cfa 1d00-1df9 1dfb-1f15 1f18-1f1d 1f20-1f45 1f48-1f4d 1f50-1f57 1f59 1f5b 1f5d 1f5f-1f7d 1f80-1fb4 1fb6-1fc4 1fc6-1fd3 1fd6-1fdb 1fdd-1fef 1ff2-1ff4 1ff6-1ffe 2000-2064 2066-2071 2074-208e 2090-209c 20a0-20bf 20d0-20f0 2100-218b 2190-2426 2440-244a 2460-26cc 26d2 26d4 26d6-26d7 26da-26db 26dd 26e2-26e8 26ec-26f0 26f6 26ff-2b4c 2b50-2b59 2b60-2b69 2b80-2b8b 2b95 2b98-2bb7 2bb9 2bbd-2bc8 2bca-2bcf 2bd1 2bec-2bef 2c00-2c2e 2c30-2c5e 2c60-2cb1 2cc0-2cc1 2cc8-2ccb 2cdc-2cea 2cef-2cf1 2cf9-2d25 2d30-2d67 2d6f-2d70 2d7f 2de0-2e52 3000-3003 3005-3007 300a-301f 3021-3029 3041-3094 3099-309e 30a0-30f6 30fb-30fe 3105-3129 3131-318e 3220-3229 3231-3232 3239 3251-325f 327f 32a3-32a8 32b1-32bf 3303 330d 3314 3318 3322-3323 3326-3327 332b 3336 333b 3349-334a 334d 3351 3357 337b-337e 3380-3384 3388-33ca 33cd-33d3 33d5-33d6 33d8 33db-33dd 3400-4db5 4dc0-9fa5 a4d0-a62b a640-a69f a700-a7bf a7c2-a7ca a7f2-a7ff a830-a836 a8e0-a92f ab30-ab6b ab70-abbf ac00 d7a2-d7a3 ef00-ef19 efbf-efec effa-f005 f00a-f00e f400-f426 f428-f441 f5c5 f6c4-f6c8 f6d1 f6d4 f6d9-f6db f8e5-fa2d fb00-fb06 fb13-fb17 fb1d-fbc1 fbd3-fbe9 fbfc-fbff fc02 fc08 fc0e fc12 fc4e fc5e-fc65 fc67-fc6b fc6d-fc71 fc73-fc77 fc79-fc7b fc8a-fc8b fc8d-fc8f fc91-fc92 fc94-fc96 fcf2-fcf4 fcfb-fcfe fd05-fd08 fd17-fd1a fd21-fd24 fd3c-fd3f fdf2 fdfc fe00-fe19 fe20-fe31 fe33-fe46 fe49-fe52 fe54-fe57 fe59-fe66 fe68-fe6b fe70-fe74 fe76-fefc feff ff01-ff5e ff61-ff9f ffe0-ffe6 fff9-fffd 10143-10147 10280-1029c 10300-10323 1032d-1034a 10380-1039d 1039f-103c3 103c8-103d5 10400 10428 1044d-1044f 10480-1049d 104a0-104a9 10783-10784 10792 10796 107a5 107aa 107b2 10900-1091b 1091f 1d000-1d0f5 1d100-1d126 1d129-1d1dd 1d300-1d356 1d400-1d454 1d456-1d49c 1d49e-1d49f 1d4a2 1d4a5-1d4a6 1d4a9-1d4ac 1d4ae-1d4b9 1d4bb 1d4bd-1d4c3 1d4c5-1d505 1d507-1d50a 1d50d-1d514 1d516-1d51c 1d51e-1d539 1d53b-1d53e 1d540-1d544 1d546 1d54a-1d550 1d552-1d6a5 1d6a8-1d7cb 1d7ce-1d7ff 1ee00-1ee03 1ee05-1ee1f 1ee21-1ee22 1ee24 1ee27 1ee29-1ee32 1ee34-1ee37 1ee39 1ee3b 1ee61-1ee62 1ee64 1ee67-1ee6a 1ee6c-1ee72 1ee74-1ee77 1ee79-1ee7c 1ee7e 1f000-1f02b 1f030-1f093 1f0a0-1f0ae 1f0b1-1f0be 1f0c1-1f0cf 1f0d1-1f0df 1f100-1f10c 1f110-1f16c 1f170-1f19a 1f1e6-1f1ff 1f300 1f310-1f318 1f31e 1f322 1f340 1f386 1f394 1f39c-1f39d 1f3b6 1f3fb-1f3ff 1f42d-1f42e 1f431 1f435 1f446-1f449 1f480 1f494-1f495 1f497-1f498 1f4a1 1f4a3-1f4a7 1f4b2 1f4b4-1f4b7 1f4de 1f507-1f50a 1f512-1f513 1f519-1f51d 1f51f-1f520 1f524-1f525 1f52f 1f53e-1f549 1f550-1f56a 1f56f 1f571 1f57b 1f57d-1f57f 1f594 1f597-1f59e 1f5a0-1f5a3 1f5af-1f5b1 1f5b5 1f5da-1f5db 1f5f2 1f5f4-1f5f8 1f600-1f623 1f625-1f62b 1f62d-1f640 1f643-1f644 1f66c-1f66f 1f674 1f676-1f67f 1f6e7 1f6ea 1f780-1f7ae 1f900-1f907 1f910 1f913";
+function charsetRanges(str) {
+  return str.split(/\s+/).filter(Boolean).map(t => { const [a, b] = t.split("-"); return [parseInt(a, 16), parseInt(b == null ? a : b, 16)]; });
+}
+const MONO_RANGES = charsetRanges(PI_MONO), ANY_RANGES = charsetRanges(PI_ANY);
+function inRanges(cp, ranges) { let lo = 0, hi = ranges.length - 1; while (lo <= hi) { const m = (lo + hi) >> 1; if (cp < ranges[m][0]) hi = m - 1; else if (cp > ranges[m][1]) lo = m + 1; else return true; } return false; }
+function glyphReport(s) {
+  const fallback = new Set(), missing = new Set();
+  const texts = [s.shop, ...s.address, ...s.meta.flat(), ...(s.table_header || []), ...s.photo_items, s.photo_item_qty, s.photo_item_price,
+    ...s.items.flat(), ...s.totals.flat(), ...(s.total || []), ...s.footer, s.barcode_caption || "", s.fine_print || "", s.rule_style === "text" ? s.rule_text : ""];
+  for (const t of texts) for (const ch of String(t).replace(/\{[^}]*\}/g, "")) {
+    const cp = ch.codePointAt(0);
+    if (cp < 32 || ch === " ") continue;
+    if (/[\p{M}\p{Cf}]/u.test(ch)) { missing.add(ch); continue; }      // stray combining marks print as boxes
+    if (inRanges(cp, MONO_RANGES)) continue;
+    (inRanges(cp, ANY_RANGES) ? fallback : missing).add(ch);
+  }
+  const el = $("glyphs");
+  if (!fallback.size && !missing.size) { el.hidden = true; return; }
+  let html = "";
+  if (missing.size) html += `<div><b>Not printable on the Pi</b> (no font there has them, they are left out): <span class="chars">${esc([...missing].join(" "))}</span></div>`;
+  if (fallback.size) html += `<div class="soft">Drawn with a fallback font on the Pi, so the shape will differ from this preview: <span class="chars">${esc([...fallback].join(" "))}</span></div>`;
+  el.innerHTML = html; el.hidden = false;
+}
+
+// ---- characters the Pi prints crisply (sheet rendered on the Pi, 2026-09-06) ----------------
+const GLYPHS = {"chars":[{"c":"✿","cp":"273F","cat":"Flowers & sparkles","faint":false},{"c":"❀","cp":"2740","cat":"Flowers & sparkles","faint":false},{"c":"❁","cp":"2741","cat":"Flowers & sparkles","faint":false},{"c":"❂","cp":"2742","cat":"Flowers & sparkles","faint":false},{"c":"❃","cp":"2743","cat":"Flowers & sparkles","faint":false},{"c":"❄","cp":"2744","cat":"Flowers & sparkles","faint":false},{"c":"❅","cp":"2745","cat":"Flowers & sparkles","faint":false},{"c":"❆","cp":"2746","cat":"Flowers & sparkles","faint":false},{"c":"❇","cp":"2747","cat":"Flowers & sparkles","faint":false},{"c":"❈","cp":"2748","cat":"Flowers & sparkles","faint":false},{"c":"❉","cp":"2749","cat":"Flowers & sparkles","faint":false},{"c":"❊","cp":"274A","cat":"Flowers & sparkles","faint":false},{"c":"❋","cp":"274B","cat":"Flowers & sparkles","faint":false},{"c":"✽","cp":"273D","cat":"Flowers & sparkles","faint":false},{"c":"✾","cp":"273E","cat":"Flowers & sparkles","faint":false},{"c":"✼","cp":"273C","cat":"Flowers & sparkles","faint":false},{"c":"✻","cp":"273B","cat":"Flowers & sparkles","faint":false},{"c":"✺","cp":"273A","cat":"Flowers & sparkles","faint":false},{"c":"✹","cp":"2739","cat":"Flowers & sparkles","faint":false},{"c":"✸","cp":"2738","cat":"Flowers & sparkles","faint":false},{"c":"✷","cp":"2737","cat":"Flowers & sparkles","faint":false},{"c":"✶","cp":"2736","cat":"Flowers & sparkles","faint":false},{"c":"✵","cp":"2735","cat":"Flowers & sparkles","faint":false},{"c":"✴","cp":"2734","cat":"Flowers & sparkles","faint":false},{"c":"✳","cp":"2733","cat":"Flowers & sparkles","faint":false},{"c":"✲","cp":"2732","cat":"Flowers & sparkles","faint":false},{"c":"✱","cp":"2731","cat":"Flowers & sparkles","faint":false},{"c":"✰","cp":"2730","cat":"Flowers & sparkles","faint":false},{"c":"✯","cp":"272F","cat":"Flowers & sparkles","faint":false},{"c":"✮","cp":"272E","cat":"Flowers & sparkles","faint":false},{"c":"✭","cp":"272D","cat":"Flowers & sparkles","faint":true},{"c":"✬","cp":"272C","cat":"Flowers & sparkles","faint":false},{"c":"✫","cp":"272B","cat":"Flowers & sparkles","faint":false},{"c":"✪","cp":"272A","cat":"Flowers & sparkles","faint":false},{"c":"✩","cp":"2729","cat":"Flowers & sparkles","faint":true},{"c":"✧","cp":"2727","cat":"Flowers & sparkles","faint":true},{"c":"✦","cp":"2726","cat":"Flowers & sparkles","faint":false},{"c":"❖","cp":"2756","cat":"Flowers & sparkles","faint":false},{"c":"✥","cp":"2725","cat":"Flowers & sparkles","faint":false},{"c":"✤","cp":"2724","cat":"Flowers & sparkles","faint":false},{"c":"✣","cp":"2723","cat":"Flowers & sparkles","faint":false},{"c":"✢","cp":"2722","cat":"Flowers & sparkles","faint":false},{"c":"✡","cp":"2721","cat":"Flowers & sparkles","faint":false},{"c":"⚘","cp":"2698","cat":"Flowers & sparkles","faint":false},{"c":"⋆","cp":"22C6","cat":"Stars & suns","faint":true},{"c":"★","cp":"2605","cat":"Stars & suns","faint":false},{"c":"☀","cp":"2600","cat":"Stars & suns","faint":false},{"c":"☼","cp":"263C","cat":"Stars & suns","faint":false},{"c":"☾","cp":"263E","cat":"Stars & suns","faint":false},{"c":"☽","cp":"263D","cat":"Stars & suns","faint":false},{"c":"☄","cp":"2604","cat":"Stars & suns","faint":true},{"c":"♥","cp":"2665","cat":"Hearts & suits","faint":false},{"c":"❤","cp":"2764","cat":"Hearts & suits","faint":false},{"c":"❣","cp":"2763","cat":"Hearts & suits","faint":false},{"c":"❥","cp":"2765","cat":"Hearts & suits","faint":false},{"c":"❦","cp":"2766","cat":"Hearts & suits","faint":false},{"c":"❧","cp":"2767","cat":"Hearts & suits","faint":false},{"c":"♠","cp":"2660","cat":"Hearts & suits","faint":false},{"c":"♣","cp":"2663","cat":"Hearts & suits","faint":false},{"c":"♦","cp":"2666","cat":"Hearts & suits","faint":false},{"c":"♤","cp":"2664","cat":"Hearts & suits","faint":true},{"c":"♧","cp":"2667","cat":"Hearts & suits","faint":true},{"c":"❢","cp":"2762","cat":"Hearts & suits","faint":false},{"c":"☺","cp":"263A","cat":"Faces & hands","faint":false},{"c":"☻","cp":"263B","cat":"Faces & hands","faint":false},{"c":"☹","cp":"2639","cat":"Faces & hands","faint":false},{"c":"☝","cp":"261D","cat":"Faces & hands","faint":true},{"c":"☟","cp":"261F","cat":"Faces & hands","faint":true},{"c":"✌","cp":"270C","cat":"Faces & hands","faint":true},{"c":"✍","cp":"270D","cat":"Faces & hands","faint":true},{"c":"✎","cp":"270E","cat":"Faces & hands","faint":false},{"c":"✏","cp":"270F","cat":"Faces & hands","faint":true},{"c":"✐","cp":"2710","cat":"Faces & hands","faint":false},{"c":"✑","cp":"2711","cat":"Faces & hands","faint":true},{"c":"✒","cp":"2712","cat":"Faces & hands","faint":false},{"c":"✓","cp":"2713","cat":"Faces & hands","faint":false},{"c":"✔","cp":"2714","cat":"Faces & hands","faint":false},{"c":"✕","cp":"2715","cat":"Faces & hands","faint":false},{"c":"✖","cp":"2716","cat":"Faces & hands","faint":false},{"c":"✗","cp":"2717","cat":"Faces & hands","faint":false},{"c":"✘","cp":"2718","cat":"Faces & hands","faint":false},{"c":"✂","cp":"2702","cat":"Faces & hands","faint":false},{"c":"✁","cp":"2701","cat":"Faces & hands","faint":true},{"c":"✃","cp":"2703","cat":"Faces & hands","faint":true},{"c":"✄","cp":"2704","cat":"Faces & hands","faint":true},{"c":"♩","cp":"2669","cat":"Music & sound","faint":false},{"c":"♪","cp":"266A","cat":"Music & sound","faint":false},{"c":"♫","cp":"266B","cat":"Music & sound","faint":false},{"c":"♬","cp":"266C","cat":"Music & sound","faint":false},{"c":"♭","cp":"266D","cat":"Music & sound","faint":true},{"c":"♮","cp":"266E","cat":"Music & sound","faint":true},{"c":"♯","cp":"266F","cat":"Music & sound","faint":false},{"c":"☊","cp":"260A","cat":"Music & sound","faint":false},{"c":"☏","cp":"260F","cat":"Music & sound","faint":true},{"c":"☎","cp":"260E","cat":"Music & sound","faint":false},{"c":"☈","cp":"2608","cat":"Music & sound","faint":false},{"c":"☁","cp":"2601","cat":"Sky & weather","faint":false},{"c":"☂","cp":"2602","cat":"Sky & weather","faint":false},{"c":"☃","cp":"2603","cat":"Sky & weather","faint":true},{"c":"☔","cp":"2614","cat":"Sky & weather","faint":false},{"c":"☇","cp":"2607","cat":"Sky & weather","faint":false},{"c":"⚡","cp":"26A1","cat":"Sky & weather","faint":false},{"c":"☕","cp":"2615","cat":"Objects","faint":true},{"c":"☘","cp":"2618","cat":"Objects","faint":false},{"c":"☙","cp":"2619","cat":"Objects","faint":false},{"c":"⚐","cp":"2690","cat":"Objects","faint":true},{"c":"⚑","cp":"2691","cat":"Objects","faint":false},{"c":"⚒","cp":"2692","cat":"Objects","faint":false},{"c":"⚓","cp":"2693","cat":"Objects","faint":false},{"c":"⚔","cp":"2694","cat":"Objects","faint":false},{"c":"⚕","cp":"2695","cat":"Objects","faint":false},{"c":"⚖","cp":"2696","cat":"Objects","faint":false},{"c":"⚗","cp":"2697","cat":"Objects","faint":false},{"c":"⚙","cp":"2699","cat":"Objects","faint":false},{"c":"⚚","cp":"269A","cat":"Objects","faint":true},{"c":"⚛","cp":"269B","cat":"Objects","faint":true},{"c":"⚜","cp":"269C","cat":"Objects","faint":false},{"c":"⚠","cp":"26A0","cat":"Objects","faint":true},{"c":"⚰","cp":"26B0","cat":"Objects","faint":false},{"c":"⚱","cp":"26B1","cat":"Objects","faint":false},{"c":"☠","cp":"2620","cat":"Objects","faint":false},{"c":"☢","cp":"2622","cat":"Objects","faint":false},{"c":"☣","cp":"2623","cat":"Objects","faint":false},{"c":"☤","cp":"2624","cat":"Objects","faint":false},{"c":"☥","cp":"2625","cat":"Objects","faint":false},{"c":"☦","cp":"2626","cat":"Objects","faint":false},{"c":"☧","cp":"2627","cat":"Objects","faint":false},{"c":"☨","cp":"2628","cat":"Objects","faint":false},{"c":"☩","cp":"2629","cat":"Objects","faint":false},{"c":"☪","cp":"262A","cat":"Objects","faint":false},{"c":"☫","cp":"262B","cat":"Objects","faint":false},{"c":"☬","cp":"262C","cat":"Objects","faint":false},{"c":"☭","cp":"262D","cat":"Objects","faint":false},{"c":"☮","cp":"262E","cat":"Objects","faint":false},{"c":"☯","cp":"262F","cat":"Objects","faint":false},{"c":"⌨","cp":"2328","cat":"Objects","faint":false},{"c":"⌘","cp":"2318","cat":"Objects","faint":false},{"c":"⚀","cp":"2680","cat":"Dice & chess","faint":false},{"c":"⚁","cp":"2681","cat":"Dice & chess","faint":false},{"c":"⚂","cp":"2682","cat":"Dice & chess","faint":false},{"c":"⚃","cp":"2683","cat":"Dice & chess","faint":false},{"c":"⚄","cp":"2684","cat":"Dice & chess","faint":false},{"c":"⚅","cp":"2685","cat":"Dice & chess","faint":false},{"c":"♔","cp":"2654","cat":"Dice & chess","faint":false},{"c":"♕","cp":"2655","cat":"Dice & chess","faint":true},{"c":"♖","cp":"2656","cat":"Dice & chess","faint":true},{"c":"♗","cp":"2657","cat":"Dice & chess","faint":false},{"c":"♙","cp":"2659","cat":"Dice & chess","faint":false},{"c":"♚","cp":"265A","cat":"Dice & chess","faint":false},{"c":"♛","cp":"265B","cat":"Dice & chess","faint":false},{"c":"♜","cp":"265C","cat":"Dice & chess","faint":false},{"c":"♝","cp":"265D","cat":"Dice & chess","faint":false},{"c":"♞","cp":"265E","cat":"Dice & chess","faint":false},{"c":"♟","cp":"265F","cat":"Dice & chess","faint":false},{"c":"♈","cp":"2648","cat":"Zodiac","faint":false},{"c":"♉","cp":"2649","cat":"Zodiac","faint":false},{"c":"♊","cp":"264A","cat":"Zodiac","faint":false},{"c":"♋","cp":"264B","cat":"Zodiac","faint":false},{"c":"♌","cp":"264C","cat":"Zodiac","faint":false},{"c":"♍","cp":"264D","cat":"Zodiac","faint":false},{"c":"♎","cp":"264E","cat":"Zodiac","faint":false},{"c":"♏","cp":"264F","cat":"Zodiac","faint":false},{"c":"♐","cp":"2650","cat":"Zodiac","faint":false},{"c":"♑","cp":"2651","cat":"Zodiac","faint":false},{"c":"♒","cp":"2652","cat":"Zodiac","faint":false},{"c":"♓","cp":"2653","cat":"Zodiac","faint":false},{"c":"◕","cp":"25D5","cat":"Kaomoji parts","faint":false},{"c":"◡","cp":"25E1","cat":"Kaomoji parts","faint":false},{"c":"◠","cp":"25E0","cat":"Kaomoji parts","faint":false},{"c":"◜","cp":"25DC","cat":"Kaomoji parts","faint":true},{"c":"◝","cp":"25DD","cat":"Kaomoji parts","faint":true},{"c":"◞","cp":"25DE","cat":"Kaomoji parts","faint":true},{"c":"◟","cp":"25DF","cat":"Kaomoji parts","faint":true},{"c":"◔","cp":"25D4","cat":"Kaomoji parts","faint":false},{"c":"◑","cp":"25D1","cat":"Kaomoji parts","faint":false},{"c":"◐","cp":"25D0","cat":"Kaomoji parts","faint":false},{"c":"◒","cp":"25D2","cat":"Kaomoji parts","faint":false},{"c":"◓","cp":"25D3","cat":"Kaomoji parts","faint":false},{"c":"ʚ","cp":"029A","cat":"Kaomoji parts","faint":false},{"c":"ɞ","cp":"025E","cat":"Kaomoji parts","faint":false},{"c":"ʘ","cp":"0298","cat":"Kaomoji parts","faint":false},{"c":"ω","cp":"03C9","cat":"Kaomoji parts","faint":false},{"c":"ᴗ","cp":"1D17","cat":"Kaomoji parts","faint":false},{"c":"ᵕ","cp":"1D55","cat":"Kaomoji parts","faint":true},{"c":"٩","cp":"0669","cat":"Kaomoji parts","faint":false},{"c":"۶","cp":"06F6","cat":"Kaomoji parts","faint":false},{"c":"ღ","cp":"10E6","cat":"Kaomoji parts","faint":false},{"c":"╭","cp":"256D","cat":"Kaomoji parts","faint":false},{"c":"╮","cp":"256E","cat":"Kaomoji parts","faint":false},{"c":"╯","cp":"256F","cat":"Kaomoji parts","faint":true},{"c":"╰","cp":"2570","cat":"Kaomoji parts","faint":false},{"c":"‿","cp":"203F","cat":"Kaomoji parts","faint":false},{"c":"⌒","cp":"2312","cat":"Kaomoji parts","faint":false},{"c":"~","cp":"007E","cat":"Kaomoji parts","faint":true},{"c":"∼","cp":"223C","cat":"Kaomoji parts","faint":false},{"c":"≈","cp":"2248","cat":"Kaomoji parts","faint":true},{"c":"≋","cp":"224B","cat":"Kaomoji parts","faint":false},{"c":"˚","cp":"02DA","cat":"Dots & swirls","faint":false},{"c":"˙","cp":"02D9","cat":"Dots & swirls","faint":true},{"c":"˜","cp":"02DC","cat":"Dots & swirls","faint":true},{"c":"·","cp":"00B7","cat":"Dots & swirls","faint":true},{"c":"•","cp":"2022","cat":"Dots & swirls","faint":false},{"c":"‣","cp":"2023","cat":"Dots & swirls","faint":false},{"c":"…","cp":"2026","cat":"Dots & swirls","faint":false},{"c":"∘","cp":"2218","cat":"Dots & swirls","faint":false},{"c":"○","cp":"25CB","cat":"Dots & swirls","faint":false},{"c":"◦","cp":"25E6","cat":"Dots & swirls","faint":true},{"c":"◌","cp":"25CC","cat":"Dots & swirls","faint":false},{"c":"⋯","cp":"22EF","cat":"Dots & swirls","faint":false},{"c":"∞","cp":"221E","cat":"Dots & swirls","faint":false},{"c":"§","cp":"00A7","cat":"Dots & swirls","faint":false},{"c":"¶","cp":"00B6","cat":"Dots & swirls","faint":false},{"c":"¤","cp":"00A4","cat":"Dots & swirls","faint":false},{"c":"«","cp":"00AB","cat":"Dots & swirls","faint":true},{"c":"»","cp":"00BB","cat":"Dots & swirls","faint":false},{"c":"‹","cp":"2039","cat":"Dots & swirls","faint":true},{"c":"›","cp":"203A","cat":"Dots & swirls","faint":false},{"c":"°","cp":"00B0","cat":"Dots & swirls","faint":false},{"c":"º","cp":"00BA","cat":"Dots & swirls","faint":false},{"c":"ª","cp":"00AA","cat":"Dots & swirls","faint":false},{"c":"←","cp":"2190","cat":"Arrows","faint":false},{"c":"↑","cp":"2191","cat":"Arrows","faint":false},{"c":"→","cp":"2192","cat":"Arrows","faint":false},{"c":"↓","cp":"2193","cat":"Arrows","faint":false},{"c":"↔","cp":"2194","cat":"Arrows","faint":false},{"c":"↕","cp":"2195","cat":"Arrows","faint":false},{"c":"↖","cp":"2196","cat":"Arrows","faint":false},{"c":"↗","cp":"2197","cat":"Arrows","faint":false},{"c":"↘","cp":"2198","cat":"Arrows","faint":false},{"c":"↙","cp":"2199","cat":"Arrows","faint":false},{"c":"↚","cp":"219A","cat":"Arrows","faint":false},{"c":"↛","cp":"219B","cat":"Arrows","faint":false},{"c":"↜","cp":"219C","cat":"Arrows","faint":false},{"c":"↝","cp":"219D","cat":"Arrows","faint":false},{"c":"↞","cp":"219E","cat":"Arrows","faint":false},{"c":"↟","cp":"219F","cat":"Arrows","faint":false},{"c":"↠","cp":"21A0","cat":"Arrows","faint":false},{"c":"↡","cp":"21A1","cat":"Arrows","faint":false},{"c":"↢","cp":"21A2","cat":"Arrows","faint":false},{"c":"↣","cp":"21A3","cat":"Arrows","faint":false},{"c":"↤","cp":"21A4","cat":"Arrows","faint":false},{"c":"↥","cp":"21A5","cat":"Arrows","faint":false},{"c":"↦","cp":"21A6","cat":"Arrows","faint":false},{"c":"↧","cp":"21A7","cat":"Arrows","faint":false},{"c":"↨","cp":"21A8","cat":"Arrows","faint":false},{"c":"↩","cp":"21A9","cat":"Arrows","faint":false},{"c":"↪","cp":"21AA","cat":"Arrows","faint":false},{"c":"↫","cp":"21AB","cat":"Arrows","faint":false},{"c":"↬","cp":"21AC","cat":"Arrows","faint":false},{"c":"↭","cp":"21AD","cat":"Arrows","faint":false},{"c":"↮","cp":"21AE","cat":"Arrows","faint":false},{"c":"↯","cp":"21AF","cat":"Arrows","faint":false},{"c":"↰","cp":"21B0","cat":"Arrows","faint":false},{"c":"↱","cp":"21B1","cat":"Arrows","faint":false},{"c":"↲","cp":"21B2","cat":"Arrows","faint":false},{"c":"↳","cp":"21B3","cat":"Arrows","faint":false},{"c":"↴","cp":"21B4","cat":"Arrows","faint":false},{"c":"↵","cp":"21B5","cat":"Arrows","faint":false},{"c":"↶","cp":"21B6","cat":"Arrows","faint":false},{"c":"↷","cp":"21B7","cat":"Arrows","faint":false},{"c":"↸","cp":"21B8","cat":"Arrows","faint":false},{"c":"↹","cp":"21B9","cat":"Arrows","faint":false},{"c":"↺","cp":"21BA","cat":"Arrows","faint":false},{"c":"↻","cp":"21BB","cat":"Arrows","faint":false},{"c":"➔","cp":"2794","cat":"Arrows","faint":false},{"c":"➘","cp":"2798","cat":"Arrows","faint":false},{"c":"➙","cp":"2799","cat":"Arrows","faint":false},{"c":"➚","cp":"279A","cat":"Arrows","faint":false},{"c":"➛","cp":"279B","cat":"Arrows","faint":false},{"c":"➜","cp":"279C","cat":"Arrows","faint":false},{"c":"➝","cp":"279D","cat":"Arrows","faint":true},{"c":"➞","cp":"279E","cat":"Arrows","faint":true},{"c":"➟","cp":"279F","cat":"Arrows","faint":false},{"c":"➠","cp":"27A0","cat":"Arrows","faint":false},{"c":"➡","cp":"27A1","cat":"Arrows","faint":false},{"c":"➢","cp":"27A2","cat":"Arrows","faint":false},{"c":"➣","cp":"27A3","cat":"Arrows","faint":true},{"c":"➤","cp":"27A4","cat":"Arrows","faint":false},{"c":"➥","cp":"27A5","cat":"Arrows","faint":false},{"c":"➦","cp":"27A6","cat":"Arrows","faint":false},{"c":"➧","cp":"27A7","cat":"Arrows","faint":false},{"c":"➨","cp":"27A8","cat":"Arrows","faint":false},{"c":"➩","cp":"27A9","cat":"Arrows","faint":false},{"c":"➪","cp":"27AA","cat":"Arrows","faint":true},{"c":"➫","cp":"27AB","cat":"Arrows","faint":false},{"c":"➬","cp":"27AC","cat":"Arrows","faint":true},{"c":"➭","cp":"27AD","cat":"Arrows","faint":true},{"c":"➮","cp":"27AE","cat":"Arrows","faint":false},{"c":"➯","cp":"27AF","cat":"Arrows","faint":true},{"c":"➱","cp":"27B1","cat":"Arrows","faint":false},{"c":"➲","cp":"27B2","cat":"Arrows","faint":false},{"c":"➳","cp":"27B3","cat":"Arrows","faint":false},{"c":"➴","cp":"27B4","cat":"Arrows","faint":false},{"c":"➵","cp":"27B5","cat":"Arrows","faint":false},{"c":"➶","cp":"27B6","cat":"Arrows","faint":false},{"c":"➷","cp":"27B7","cat":"Arrows","faint":false},{"c":"➸","cp":"27B8","cat":"Arrows","faint":false},{"c":"➹","cp":"27B9","cat":"Arrows","faint":false},{"c":"➺","cp":"27BA","cat":"Arrows","faint":false},{"c":"➻","cp":"27BB","cat":"Arrows","faint":false},{"c":"➼","cp":"27BC","cat":"Arrows","faint":false},{"c":"➽","cp":"27BD","cat":"Arrows","faint":false},{"c":"➾","cp":"27BE","cat":"Arrows","faint":false},{"c":"─","cp":"2500","cat":"Lines & borders","faint":false},{"c":"━","cp":"2501","cat":"Lines & borders","faint":false},{"c":"┄","cp":"2504","cat":"Lines & borders","faint":true},{"c":"┅","cp":"2505","cat":"Lines & borders","faint":false},{"c":"┈","cp":"2508","cat":"Lines & borders","faint":true},{"c":"┉","cp":"2509","cat":"Lines & borders","faint":false},{"c":"╌","cp":"254C","cat":"Lines & borders","faint":true},{"c":"╍","cp":"254D","cat":"Lines & borders","faint":false},{"c":"═","cp":"2550","cat":"Lines & borders","faint":false},{"c":"▁","cp":"2581","cat":"Lines & borders","faint":false},{"c":"▂","cp":"2582","cat":"Lines & borders","faint":false},{"c":"▃","cp":"2583","cat":"Lines & borders","faint":false},{"c":"▄","cp":"2584","cat":"Lines & borders","faint":false},{"c":"▅","cp":"2585","cat":"Lines & borders","faint":false},{"c":"▆","cp":"2586","cat":"Lines & borders","faint":false},{"c":"▇","cp":"2587","cat":"Lines & borders","faint":false},{"c":"█","cp":"2588","cat":"Lines & borders","faint":false},{"c":"░","cp":"2591","cat":"Lines & borders","faint":false},{"c":"▒","cp":"2592","cat":"Lines & borders","faint":false},{"c":"▓","cp":"2593","cat":"Lines & borders","faint":false},{"c":"▔","cp":"2594","cat":"Lines & borders","faint":false},{"c":"▕","cp":"2595","cat":"Lines & borders","faint":false},{"c":"╱","cp":"2571","cat":"Lines & borders","faint":false},{"c":"╲","cp":"2572","cat":"Lines & borders","faint":false},{"c":"╳","cp":"2573","cat":"Lines & borders","faint":false},{"c":"■","cp":"25A0","cat":"Shapes","faint":false},{"c":"□","cp":"25A1","cat":"Shapes","faint":false},{"c":"▪","cp":"25AA","cat":"Shapes","faint":false},{"c":"▫","cp":"25AB","cat":"Shapes","faint":false},{"c":"▬","cp":"25AC","cat":"Shapes","faint":false},{"c":"▭","cp":"25AD","cat":"Shapes","faint":false},{"c":"▮","cp":"25AE","cat":"Shapes","faint":false},{"c":"▯","cp":"25AF","cat":"Shapes","faint":false},{"c":"▰","cp":"25B0","cat":"Shapes","faint":false},{"c":"▱","cp":"25B1","cat":"Shapes","faint":true},{"c":"▲","cp":"25B2","cat":"Shapes","faint":false},{"c":"△","cp":"25B3","cat":"Shapes","faint":false},{"c":"▴","cp":"25B4","cat":"Shapes","faint":false},{"c":"▵","cp":"25B5","cat":"Shapes","faint":false},{"c":"▶","cp":"25B6","cat":"Shapes","faint":false},{"c":"▷","cp":"25B7","cat":"Shapes","faint":false},{"c":"▸","cp":"25B8","cat":"Shapes","faint":false},{"c":"▹","cp":"25B9","cat":"Shapes","faint":false},{"c":"►","cp":"25BA","cat":"Shapes","faint":false},{"c":"▻","cp":"25BB","cat":"Shapes","faint":false},{"c":"▼","cp":"25BC","cat":"Shapes","faint":false},{"c":"▽","cp":"25BD","cat":"Shapes","faint":false},{"c":"▾","cp":"25BE","cat":"Shapes","faint":false},{"c":"▿","cp":"25BF","cat":"Shapes","faint":false},{"c":"◀","cp":"25C0","cat":"Shapes","faint":false},{"c":"◁","cp":"25C1","cat":"Shapes","faint":false},{"c":"◂","cp":"25C2","cat":"Shapes","faint":false},{"c":"◃","cp":"25C3","cat":"Shapes","faint":false},{"c":"◄","cp":"25C4","cat":"Shapes","faint":false},{"c":"◅","cp":"25C5","cat":"Shapes","faint":false},{"c":"◆","cp":"25C6","cat":"Shapes","faint":false},{"c":"◇","cp":"25C7","cat":"Shapes","faint":false},{"c":"◈","cp":"25C8","cat":"Shapes","faint":false},{"c":"◉","cp":"25C9","cat":"Shapes","faint":false},{"c":"◊","cp":"25CA","cat":"Shapes","faint":false},{"c":"◍","cp":"25CD","cat":"Shapes","faint":false},{"c":"◎","cp":"25CE","cat":"Shapes","faint":false},{"c":"●","cp":"25CF","cat":"Shapes","faint":false},{"c":"◖","cp":"25D6","cat":"Shapes","faint":false},{"c":"◗","cp":"25D7","cat":"Shapes","faint":false},{"c":"◘","cp":"25D8","cat":"Shapes","faint":false},{"c":"◙","cp":"25D9","cat":"Shapes","faint":false},{"c":"◚","cp":"25DA","cat":"Shapes","faint":false},{"c":"◛","cp":"25DB","cat":"Shapes","faint":false},{"c":"◢","cp":"25E2","cat":"Shapes","faint":false},{"c":"◣","cp":"25E3","cat":"Shapes","faint":false},{"c":"◤","cp":"25E4","cat":"Shapes","faint":false},{"c":"◥","cp":"25E5","cat":"Shapes","faint":false},{"c":"◧","cp":"25E7","cat":"Shapes","faint":false},{"c":"◨","cp":"25E8","cat":"Shapes","faint":false},{"c":"◩","cp":"25E9","cat":"Shapes","faint":false},{"c":"◪","cp":"25EA","cat":"Shapes","faint":false},{"c":"◫","cp":"25EB","cat":"Shapes","faint":false},{"c":"◬","cp":"25EC","cat":"Shapes","faint":false},{"c":"◭","cp":"25ED","cat":"Shapes","faint":false},{"c":"◮","cp":"25EE","cat":"Shapes","faint":false},{"c":"◯","cp":"25EF","cat":"Shapes","faint":false},{"c":"◰","cp":"25F0","cat":"Shapes","faint":false},{"c":"◱","cp":"25F1","cat":"Shapes","faint":false},{"c":"◲","cp":"25F2","cat":"Shapes","faint":false},{"c":"◳","cp":"25F3","cat":"Shapes","faint":false},{"c":"◴","cp":"25F4","cat":"Shapes","faint":false},{"c":"◵","cp":"25F5","cat":"Shapes","faint":false},{"c":"◶","cp":"25F6","cat":"Shapes","faint":false},{"c":"◷","cp":"25F7","cat":"Shapes","faint":false},{"c":"◸","cp":"25F8","cat":"Shapes","faint":false},{"c":"◹","cp":"25F9","cat":"Shapes","faint":false},{"c":"◺","cp":"25FA","cat":"Shapes","faint":false},{"c":"◻","cp":"25FB","cat":"Shapes","faint":false},{"c":"◼","cp":"25FC","cat":"Shapes","faint":false},{"c":"◽","cp":"25FD","cat":"Shapes","faint":false},{"c":"◾","cp":"25FE","cat":"Shapes","faint":false},{"c":"©","cp":"00A9","cat":"Signs","faint":false},{"c":"®","cp":"00AE","cat":"Signs","faint":false},{"c":"™","cp":"2122","cat":"Signs","faint":false},{"c":"℗","cp":"2117","cat":"Signs","faint":false},{"c":"№","cp":"2116","cat":"Signs","faint":false},{"c":"℮","cp":"212E","cat":"Signs","faint":false},{"c":"☑","cp":"2611","cat":"Signs","faint":false},{"c":"☒","cp":"2612","cat":"Signs","faint":false},{"c":"✆","cp":"2706","cat":"Signs","faint":true},{"c":"✇","cp":"2707","cat":"Signs","faint":false},{"c":"✈","cp":"2708","cat":"Signs","faint":false},{"c":"✉","cp":"2709","cat":"Signs","faint":false},{"c":"⚉","cp":"2689","cat":"Signs","faint":false},{"c":"⚊","cp":"268A","cat":"Signs","faint":true},{"c":"⚋","cp":"268B","cat":"Signs","faint":true}],"cols":32,"cell16":[18,24],"cell24":[28,34]};
+const SPRITE = {16: "data:image/png;base64,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", 24: "data:image/png;base64,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"};
+let charSize = 24, lastText = null;
+function buildChars() {
+  const q = $("char-search").value.trim().toLowerCase();
+  const cell = GLYPHS["cell" + charSize], scale = charSize === 24 ? 2 : 3;
+  const cw = cell[0] * scale, chh = cell[1] * scale, sheetW = GLYPHS.cols * cell[0] * scale;
+  const cats = new Map();
+  GLYPHS.chars.forEach((x, i) => {
+    if (q && !(x.cat.toLowerCase().includes(q) || x.cp.toLowerCase().includes(q) || x.c === q)) return;
+    if (!cats.has(x.cat)) cats.set(x.cat, []);
+    cats.get(x.cat).push({ x, i });
+  });
+  let html = "";
+  for (const [cat, items] of cats) {
+    html += `<details open><summary>${esc(cat)} <small>${items.length}</small></summary><div class="cgrid">` + items.map(({ x, i }) => {
+      const bx = -(i % GLYPHS.cols) * cw, by = -Math.floor(i / GLYPHS.cols) * chh;
+      return `<button type="button" class="cell${x.faint ? " faint" : ""}" data-c="${esc(x.c)}" title="U+${x.cp}${x.faint ? " — faint at 16 dots" : ""}">
+        <span class="g" style="width:${cw}px;height:${chh}px;background-image:url(${SPRITE[charSize]});background-size:${sheetW}px auto;background-position:${bx}px ${by}px"></span>
+        <span class="t">${esc(x.c)}</span></button>`;
+    }).join("") + "</div></details>";
+  }
+  $("char-cats").innerHTML = html || `<div class="chars-note">Nothing matches "${esc(q)}".</div>`;
+}
+function insertChar(ch) {
+  const el = lastText && document.contains(lastText) ? lastText : null;
+  const st = $("status");
+  if (el) {
+    const a = el.selectionStart ?? el.value.length, b = el.selectionEnd ?? a;
+    el.value = el.value.slice(0, a) + ch + el.value.slice(b);
+    el.selectionStart = el.selectionEnd = a + ch.length;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    const label = el.closest("label"); const name = label ? label.firstChild.textContent.trim() : el.id;
+    st.textContent = `Inserted ${ch} into ${name}.`; st.className = "ok";
+  } else {
+    st.textContent = `Copied ${ch}. Click into a receipt text field first and the next click inserts there.`; st.className = "";
+  }
+  try { navigator.clipboard.writeText(ch); } catch (e) {}
+}
+buildChars();
+$("char-search").addEventListener("input", buildChars);
+$("char-size").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  for (const x of $("char-size").querySelectorAll("button")) x.setAttribute("aria-pressed", x === b ? "true" : "false");
+  charSize = Number(b.dataset.v); buildChars();
+});
+$("char-cats").addEventListener("click", e => { const c = e.target.closest(".cell"); if (c) insertChar(c.dataset.c); });
+document.addEventListener("focusin", e => {
+  const t = e.target;
+  if (t.closest && t.closest("#form") && (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type === "text"))) {
+    lastText = t;
+    const label = t.closest("label"); $("char-target").textContent = "inserting into: " + (label ? label.firstChild.textContent.trim() : t.id);
+  }
+});
+
+// ---- form ---------------------------------------------------------------------
+const FIELDS = [
+  { group: "Header" },
+  { k: "shop", t: "text", label: "Shop name" },
+  { k: "address", t: "lines", label: "Address lines", small: "one per line; empty for none" },
+  { row: [{ k: "size_shop", t: "num", label: "Header size (dots)" }, { k: "shop_tracking", t: "num", label: "Header letter spacing (dots)" }] },
+  { group: "Transaction" },
+  { k: "meta", t: "pairs", label: "Meta rows", small: "left | right, one per line" },
+  { group: "Items" },
+  { k: "table_header", t: "pair", label: "Table header", small: "left | right; blank for none" },
+  { k: "photos_as_items", t: "bool", label: "Each photo is a line item (off: photos stack above the items)" },
+  { k: "photo_items", t: "lines", label: "Photo item names", small: "one per photo, cycles if there are more photos" },
+  { row: [{ k: "photo_item_qty", t: "text", label: "Photo item qty" }, { k: "photo_item_price", t: "text", label: "Photo item price" }] },
+  { k: "items", t: "pairs", label: "Extra text items", small: "left | right, one per line" },
+  { group: "Totals" },
+  { k: "totals", t: "pairs", label: "Total rows", small: "left | right, one per line" },
+  { k: "total", t: "pair", label: "Big total line", small: "left | right; blank for none" },
+  { group: "Footer" },
+  { k: "footer", t: "lines", label: "Footer lines", small: "first line is bold; an empty line makes a gap" },
+  { row: [{ k: "barcode", t: "text", label: "Barcode payload (Code 39)", small: "blank for none" }, { k: "barcode_caption", t: "text", label: "Barcode caption" }] },
+  { k: "fine_print", t: "text", label: "Fine print" },
+  { group: "Rules" },
+  { k: "rules", t: "multi", label: "Where a line appears", options: RULE_SLOTS },
+  { row: [{ k: "rule_style", t: "select", label: "Line style", options: RULE_STYLES }, { k: "rule_text", t: "text", label: "Text pattern", small: "for the text style, e.g. * or = or - " }] },
+  { row: [{ k: "rule_thickness", t: "num", label: "Thickness (dots)" }, { k: "rule_pad", t: "num", label: "Space above & below (dots)" }] },
+  { row: [{ k: "rule_dash", t: "num", label: "Dash length (dots)" }, { k: "rule_gap", t: "num", label: "Gap (dots)", small: "between dashes/dots, or the two lines of a double rule" }] },
+  { group: "Layout" },
+  { row: [{ k: "torn_edges", t: "bool", label: "Torn zigzag edges" }, { k: "dither", t: "bool", label: "Dither photos (Floyd–Steinberg)" }] },
+  { row3: [{ k: "margin", t: "num", label: "Side margin (dots)" }, { k: "photo_border", t: "num", label: "Photo frame (dots)" }, { k: "photo_aspect", t: "aspect", label: "Photo aspect w:h" }] },
+  { row: [{ k: "size_small", t: "num", label: "Small text (dots)" }, { k: "size_body", t: "num", label: "Body text (dots)" }] },
+  { row: [{ k: "size_total", t: "num", label: "Total line (dots)" }, { k: "size_fine", t: "num", label: "Fine print (dots)" }] },
+];
+const NULLABLE = new Set(["table_header", "total", "barcode", "barcode_caption", "fine_print"]);
+
+function fieldHtml(f) {
+  const small = f.small ? ` <small>${f.small}</small>` : "";
+  if (f.t === "bool") return `<label class="check"><input type="checkbox" id="f_${f.k}"> ${f.label}</label>`;
+  if (f.t === "select") return `<label>${f.label}${small}<select id="f_${f.k}">${f.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></label>`;
+  if (f.t === "multi") return `<div class="multi" id="f_${f.k}"><label>${f.label}${small}</label>${f.options.map(([v, l]) => `<label class="check"><input type="checkbox" value="${v}"> <span><b>${v.replace("_", " ")}</b> <small>${l}</small></span></label>`).join("")}</div>`;
+  if (f.t === "lines" || f.t === "pairs") return `<label>${f.label}${small}<textarea id="f_${f.k}" rows="3"></textarea></label>`;
+  if (f.t === "num") return `<label>${f.label}${small}<input type="number" id="f_${f.k}" min="0" max="384"></label>`;
+  return `<label>${f.label}${small}<input type="text" id="f_${f.k}"></label>`;
+}
+function build() {
+  let html = "";
+  for (const f of FIELDS) {
+    if (f.group) html += `<h2>${f.group}</h2>`;
+    else if (f.row) html += `<div class="row">${f.row.map(fieldHtml).join("")}</div>`;
+    else if (f.row3) html += `<div class="row3">${f.row3.map(fieldHtml).join("")}</div>`;
+    else html += fieldHtml(f);
+  }
+  html += `<div class="hint">Placeholders work in any text: <code>{date:%m/%d/%Y}</code>, <code>{date:%-I:%M %p}</code>,
+    <code>{date:%B %-d, %Y}</code>, <code>{txn:04d}</code> (order number), <code>{n}</code> (photo count).
+    Sizes are printer dots: 8 dots = 1 mm, 384 dots across. Text on the Pi is DejaVu Sans Mono; here it is Cousine, the same 0.6 em advance, so line breaks and clipping match to within a dot or two.</div>`;
+  form.innerHTML = html;
+  form.addEventListener("input", () => { dirty = true; schedule(); });
+}
+const allFields = () => FIELDS.flatMap(f => f.row || f.row3 || (f.k ? [f] : []));
+const pairText = p => p ? `${p[0]} | ${p[1]}` : "";
+const parsePair = s => { const i = s.indexOf("|"); return i < 0 ? [s.trim(), ""] : [s.slice(0, i).trimEnd(), s.slice(i + 1).trimStart()]; };
+
+function fillForm(s) {
+  for (const f of allFields()) {
+    const el = $("f_" + f.k), v = s[f.k];
+    if (f.t === "bool") el.checked = !!v;
+    else if (f.t === "multi") { for (const cb of el.querySelectorAll("input")) cb.checked = (v || []).includes(cb.value); }
+    else if (f.t === "select") el.value = f.options.some(([o]) => o === v) ? v : f.options[0][0];
+    else if (f.t === "lines") el.value = (v || []).join("\n");
+    else if (f.t === "pairs") el.value = (v || []).map(pairText).join("\n");
+    else if (f.t === "pair") el.value = pairText(v);
+    else if (f.t === "aspect") el.value = v ? `${v[0]}:${v[1]}` : "4:3";
+    else el.value = v == null ? "" : v;
+  }
+}
+function collect() {
+  const s = { width: WIDTH };
+  for (const f of allFields()) {
+    const el = $("f_" + f.k), v = el.value;
+    if (f.t === "bool") s[f.k] = el.checked;
+    else if (f.t === "multi") s[f.k] = [...el.querySelectorAll("input:checked")].map(cb => cb.value);
+    else if (f.t === "select") s[f.k] = el.value;
+    else if (f.t === "num") s[f.k] = Math.max(0, Number(v || 0));
+    else if (f.t === "lines") s[f.k] = v === "" ? [] : v.split("\n");
+    else if (f.t === "pairs") s[f.k] = v.split("\n").filter(l => l.trim() !== "").map(parsePair);
+    else if (f.t === "pair") s[f.k] = v.trim() === "" ? null : parsePair(v);
+    else if (f.t === "aspect") { const m = v.match(/(\d+)\D+(\d+)/); s[f.k] = m ? [Number(m[1]), Number(m[2])] : [4, 3]; }
+    else s[f.k] = (v === "" && NULLABLE.has(f.k)) ? null : v;
+  }
+  // keep the tape printable: margin leaves room, sizes are at least legible on paper
+  s.margin = Math.min(s.margin, 120);
+  s.photo_aspect = s.photo_aspect.map(x => Math.max(1, x));
+  for (const k of ["size_shop", "size_small", "size_body", "size_total", "size_fine"]) s[k] = Math.max(6, s[k]);
+  return s;
+}
+
+// ---- preview ---------------------------------------------------------------------
+let dirty = false, timer = null, scale = 1, look = "dots", uploads = [], last = null;
+const paper = $("paper"), ruler = $("ruler");
+
+function samplePhotos(count) {
+  count = Math.max(1, Math.min(6, count));
+  const set = $("photo_set").value;
+  const out = [];
+  for (let i = 0; i < count; i++) out.push(set === "uploads" && uploads.length ? uploads[i % uploads.length] : placeholder(i));
+  return out;
+}
+function schedule() { clearTimeout(timer); timer = setTimeout(render, 250); }
+
+function render() {
+  const s = collect();
+  try { localStorage.setItem("tape-bench-draft", JSON.stringify({ settings: s, photos: $("photos").value, number: $("number").value })); } catch (e) {}
+  const photos = samplePhotos(Number($("photos").value || 3));
+  const number = Number($("number").value || 0);
+  last = makeReceipt(photos, s, new Date(), number);
+  last.settings = s;
+  glyphReport(s);
+  draw();
+  readouts();
+  $("json").value = JSON.stringify(s, null, 2);
+  const st = $("status");
+  if (last.rows / DPMM > 300) { st.textContent = `${(last.rows / DPMM).toFixed(0)} mm is a long receipt; the roll only holds about 10 m.`; st.className = "warn"; }
+  else if (currentId != null) {
+    const cur = sets.find(x => x.id === currentId);
+    st.textContent = cur ? (setDirty ? `Editing "${cur.name}" with unsaved changes. Save updates it, Save as new keeps both.` : `Showing "${cur.name}".`) : "";
+    st.className = "";
+  }
+  else { st.textContent = dirty ? "Working draft kept in this browser. Save it as an iteration to keep it alongside others." : "Showing the booth's built-in copy."; st.className = ""; }
+  renderSets();
+}
+
+// ---- iterations: named sets kept in localStorage --------------------------------
+let sets = [], currentId = null, setDirty = false;
+try { sets = JSON.parse(localStorage.getItem("tape-bench-sets") || "[]"); if (!Array.isArray(sets)) sets = []; } catch (e) { sets = []; }
+try { currentId = JSON.parse(localStorage.getItem("tape-bench-current") || "null"); } catch (e) {}
+function persistSets() {
+  try { localStorage.setItem("tape-bench-sets", JSON.stringify(sets)); localStorage.setItem("tape-bench-current", JSON.stringify(currentId)); } catch (e) {}
+}
+function snapshot(name) {
+  return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name,
+    settings: collect(), photos: Number($("photos").value || 3), number: Number($("number").value || 0),
+    rows: last ? last.rows : null, saved: new Date().toISOString() };
+}
+function saveSet(asNew) {
+  const typed = $("set-name").value.trim();
+  const cur = !asNew && currentId != null ? sets.find(x => x.id === currentId) : null;
+  const name = typed || (cur ? cur.name : `Iteration ${sets.length + 1}`);
+  const snap = snapshot(name);
+  if (cur) Object.assign(cur, snap, { id: cur.id });
+  else { sets.push(snap); currentId = snap.id; }
+  setDirty = false; persistSets(); dbPut(cur || snap);
+  $("set-name").value = name;
+  $("status").textContent = cur ? `Updated "${name}".` : `Saved "${name}".`; $("status").className = "ok";
+  renderSets();
+}
+function loadSet(id) {
+  const x = sets.find(y => y.id === id); if (!x) return;
+  fillForm(Object.assign({}, RECEIPT, x.settings));
+  $("photos").value = x.photos || 3; $("number").value = x.number || 0;
+  currentId = id; setDirty = false; dirty = true; $("set-name").value = x.name; persistSets();
+  render();
+}
+function renderSets() {
+  const ul = $("set-list"); if (!ul) return;
+  $("set-empty").hidden = sets.length > 0;
+  ul.innerHTML = sets.map(x => {
+    const when = new Date(x.saved); const t = isNaN(when) ? "" : when.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const mm = x.rows ? `${Math.round(x.rows / DPMM)} mm · ` : "";
+    return `<li class="${x.id === currentId ? "current" : ""}" data-id="${x.id}">
+      <button type="button" class="load" data-act="load"><b>${esc(x.name)}</b><small>${mm}${x.photos} photo${x.photos === 1 ? "" : "s"} · ${x.settings.rule_style || "dashed"} rules · ${t}</small></button>
+      <button type="button" class="small" data-act="dup" title="Duplicate">copy</button>
+      <button type="button" class="small" data-act="del" title="Delete">delete</button></li>`;
+  }).join("");
+}
+$("set-save").onclick = () => saveSet(false);
+$("set-new").onclick = () => saveSet(true);
+$("set-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveSet(false); } });
+$("set-list").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const li = b.closest("li"), id = li.dataset.id, i = sets.findIndex(x => x.id === id);
+  if (i < 0) return;
+  if (b.dataset.act === "load") loadSet(id);
+  else if (b.dataset.act === "dup") {
+    const copy = JSON.parse(JSON.stringify(sets[i])); copy.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    copy.name = sets[i].name + " copy"; copy.saved = new Date().toISOString();
+    sets.splice(i + 1, 0, copy); persistSets(); dbPut(copy); loadSet(copy.id);
+  }
+  else if (b.dataset.act === "del") {
+    if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "sure?"; setTimeout(() => { b.dataset.confirm = ""; b.textContent = "delete"; }, 3000); return; }
+    const name = sets[i].name; dbDel(sets[i].id); sets.splice(i, 1);
+    if (currentId === id) { currentId = null; $("set-name").value = ""; }
+    persistSets(); renderSets();
+    $("status").textContent = `Deleted "${name}".`; $("status").className = "";
+  }
+});
+async function exportSets() {
+  if (!sets.length) { $("status").textContent = "Nothing to export yet."; $("status").className = "warn"; return; }
+  const text = JSON.stringify({ tape_bench_sets: sets }, null, 2), st = $("status");
+  const dl = (window.claude && window.claude.use) ? await window.claude.use("downloads").catch(() => null) : null;
+  if (dl) {
+    try { await dl.save({ filename: "tape-bench-sets.json", data: text }); st.textContent = `Exported ${sets.length} iteration${sets.length === 1 ? "" : "s"}.`; st.className = "ok"; }
+    catch (e) { st.textContent = e && e.code === "declined" ? "Export cancelled." : "Could not export here: " + (e && e.message || e); st.className = "warn"; }
+    return;
+  }
+  const a = document.createElement("a"); a.href = "data:application/json;charset=utf-8," + encodeURIComponent(text); a.download = "tape-bench-sets.json"; a.click();
+}
+function importSets(text) {
+  let data; try { data = JSON.parse(text); } catch (e) { $("status").textContent = "That file is not JSON: " + e.message; $("status").className = "warn"; return; }
+  let incoming = Array.isArray(data) ? data : data.tape_bench_sets;
+  if (!incoming && data && typeof data === "object" && "shop" in data) incoming = [{ name: data.shop || "Imported receipt.json", settings: data, photos: 3, number: 47 }];
+  if (!Array.isArray(incoming)) { $("status").textContent = "No iterations found in that file."; $("status").className = "warn"; return; }
+  let n = 0;
+  for (const x of incoming) {
+    if (!x || typeof x !== "object" || !x.settings) continue;
+    sets.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + n, name: String(x.name || `Imported ${n + 1}`).slice(0, 60),
+      settings: Object.assign({}, RECEIPT, x.settings), photos: Number(x.photos) || 3, number: Number(x.number) || 0, rows: x.rows || null, saved: x.saved || new Date().toISOString() });
+    n++;
+  }
+  persistSets(); renderSets(); for (const x of sets.slice(sets.length - n)) dbPut(x);
+  $("status").textContent = `Imported ${n} iteration${n === 1 ? "" : "s"}.`; $("status").className = n ? "ok" : "warn";
+}
+$("sets-export").onclick = exportSets;
+$("sets-import").onclick = () => $("sets-file").click();
+$("sets-file").addEventListener("change", () => { const f = $("sets-file").files[0]; if (f) f.text().then(importSets); $("sets-file").value = ""; });
+form.addEventListener("input", () => { setDirty = true; });
+for (const id of ["photos", "number"]) $(id).addEventListener("input", () => { setDirty = true; });
+
+function draw() {
+  if (!last) return;
+  const { bits, rows } = last;
+  // 1-bit image at 1x
+  const one = document.createElement("canvas"); one.width = WIDTH; one.height = rows;
+  const og = one.getContext("2d"), img = og.createImageData(WIDTH, rows), d = img.data;
+  for (let i = 0; i < bits.length; i++) { const v = bits[i] ? 20 : 255; d[i * 4] = v; d[i * 4 + 1] = v; d[i * 4 + 2] = v; d[i * 4 + 3] = bits[i] ? 255 : 0; }
+  og.putImageData(img, 0, 0);
+
+  const pw = PAPER_PX * scale, ph = rows * scale;
+  paper.width = pw; paper.height = ph;
+  paper.style.width = pw + "px"; paper.style.height = ph + "px";
+  const g = paper.getContext("2d");
+  g.fillStyle = look === "paper" ? "#fbfaf5" : "#ffffff";
+  g.fillRect(0, 0, pw, ph);
+  if (look === "paper") {                                  // thermal head dots bloom a little into the coating
+    g.imageSmoothingEnabled = true;
+    g.filter = `blur(${0.35 * scale}px)`;
+    g.drawImage(one, PAPER_OFF * scale, 0, WIDTH * scale, ph);
+    g.filter = "none";
+    g.globalAlpha = 0.85;
+    g.drawImage(one, PAPER_OFF * scale, 0, WIDTH * scale, ph);
+    g.globalAlpha = 1;
+  } else {
+    g.imageSmoothingEnabled = false;
+    g.drawImage(one, PAPER_OFF * scale, 0, WIDTH * scale, ph);
+    // faint guides for the head's printable band
+    g.fillStyle = "rgba(243,79,174,.35)";
+    g.fillRect(PAPER_OFF * scale - 1, 0, 1, ph);
+    g.fillRect((PAPER_OFF + WIDTH) * scale, 0, 1, ph);
+  }
+
+  // mm ruler
+  const rw = 30;
+  ruler.width = rw; ruler.height = ph; ruler.style.width = rw + "px"; ruler.style.height = ph + "px";
+  const rg = ruler.getContext("2d");
+  rg.clearRect(0, 0, rw, ph);
+  const cs = getComputedStyle(document.documentElement);
+  rg.fillStyle = cs.getPropertyValue("--muted").trim() || "#777";
+  rg.font = `9px ${FONT}`; rg.textAlign = "right"; rg.textBaseline = "middle";
+  const mmTotal = rows / DPMM;
+  for (let mm = 0; mm <= mmTotal; mm++) {
+    const y = Math.round(mm * DPMM * scale) + 0.5;
+    const len = mm % 10 === 0 ? 8 : mm % 5 === 0 ? 5 : (scale >= 2 ? 3 : 0);
+    if (len) rg.fillRect(rw - len, y, len, 1);
+    if (mm % 10 === 0 && (scale >= 2 || mm % 20 === 0)) rg.fillText(String(mm), rw - 10, y + (mm === 0 ? 5 : 0));
+  }
+}
+
+function readouts() {
+  const { rows, black } = last, mm = rows / DPMM;
+  $("r-mm").innerHTML = `${mm.toFixed(0)}<small>mm</small>`;
+  $("r-rows").textContent = `${rows} rows × 384 dots`;
+  $("r-time").innerHTML = `${(mm / SPEED[1]).toFixed(1)} – ${(mm / SPEED[0]).toFixed(1)}<small>s</small>`;
+  $("r-roll").textContent = String(Math.floor(ROLL_MM / (mm + 4 * 30 / DPMM)));   // + the 4-line feed after each print
+  $("r-ink").innerHTML = `${(100 * black / (rows * WIDTH)).toFixed(1)}<small>%</small>`;
+  const bytes = rows * 48 + Math.ceil(rows / BAND_ROWS) * 8;
+  $("r-bytes").textContent = `${(bytes / 1024).toFixed(1)} KB raster, ${Math.ceil(rows / BAND_ROWS)} GS v 0 bands`;
+}
+
+// ---- wiring ----------------------------------------------------------------------
+function loadPreset(name) {
+  fillForm(PRESETS[name]); $("photos").value = PHOTO_DEFAULT[name]; dirty = true; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); render();
+}
+$("preset-receipt").onclick = () => loadPreset("receipt");
+$("preset-birthday").onclick = () => loadPreset("birthday");
+$("reset-draft").onclick = () => { try { localStorage.removeItem("tape-bench-draft"); } catch (e) {} dirty = false; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); fillForm(RECEIPT); $("photos").value = 3; render(); };
+$("copy-json").onclick = async () => {
+  const text = $("json").value, st = $("status");
+  try { await navigator.clipboard.writeText(text); st.textContent = "Copied. On the Pi, save it as ~/photobooth/receipt.json and restart the booth."; st.className = "ok"; }
+  catch (e) { $("json").closest("details").open = true; $("json").select(); st.textContent = "Clipboard blocked here: the JSON is selected below, copy it by hand."; st.className = "warn"; }
+};
+$("download-png").onclick = async () => {
+  if (!last) return;
+  const c = document.createElement("canvas"); c.width = WIDTH; c.height = last.rows;
+  const g = c.getContext("2d"), img = g.createImageData(WIDTH, last.rows), d = img.data;
+  for (let i = 0; i < last.bits.length; i++) { const v = last.bits[i] ? 0 : 255; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+  g.putImageData(img, 0, 0);
+  const st = $("status"), note = "receipt.png is the 384-dot raster; print it on the Pi with printer_check.py --image receipt.png.";
+  const dl = (window.claude && window.claude.use) ? await window.claude.use("downloads").catch(() => null) : null;
+  if (dl) {
+    const blob = await new Promise(res => c.toBlob(res, "image/png"));
+    try { await dl.save({ filename: "receipt.png", data: blob }); st.textContent = "Saved. " + note; st.className = "ok"; }
+    catch (e) { st.textContent = e && e.code === "declined" ? "Download cancelled." : "Could not save the PNG here: " + (e && e.message || e); st.className = "warn"; }
+    return;
+  }
+  const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "receipt.png"; a.click();
+  st.textContent = note; st.className = "";
+};
+$("load-json").onclick = () => {
+  try {
+    const data = JSON.parse($("json").value);
+    fillForm(Object.assign({}, RECEIPT, data)); dirty = true; render();
+    $("status").textContent = "Loaded the pasted receipt.json."; $("status").className = "ok";
+  } catch (e) { $("status").textContent = "That is not valid JSON: " + e.message; $("status").className = "warn"; }
+};
+for (const id of ["photos", "number", "photo_set"]) $(id).addEventListener("input", schedule);
+for (const [id, setter] of [["scale", v => scale = Number(v)], ["look", v => look = v]]) {
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    for (const x of $(id).querySelectorAll("button")) x.setAttribute("aria-pressed", x === b ? "true" : "false");
+    setter(b.dataset.v); draw();
+  });
+}
+
+const drop = $("drop"), file = $("file");
+drop.addEventListener("click", e => { if (!e.target.closest("button")) file.click(); });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
+file.addEventListener("change", () => { addFiles(file.files); file.value = ""; });
+function addFiles(files) {
+  const list = [...files].filter(f => f.type.startsWith("image/"));
+  let pending = list.length;
+  if (!pending) return;
+  for (const f of list) {
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      const c = document.createElement("canvas");                 // keep a 900 px copy; plenty for a 360-dot tile
+      const k = Math.min(1, 900 / im.width); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      uploads.push(c); URL.revokeObjectURL(url);
+      if (--pending === 0) { refreshSets(); $("photo_set").value = "uploads"; render(); }
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); if (--pending === 0) { refreshSets(); render(); } };
+    im.src = url;
+  }
+}
+function refreshSets() {
+  const sel = $("photo_set"), cur = sel.value;
+  sel.innerHTML = `<option value="placeholder">synthetic placeholders</option>` + (uploads.length ? `<option value="uploads">your photos (${uploads.length})</option>` : "");
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : "placeholder";
+}
+$("clear-uploads").onclick = e => { e.stopPropagation(); uploads = []; refreshSets(); render(); };
+
+build();
+let draft = null;
+try { draft = JSON.parse(localStorage.getItem("tape-bench-draft") || "null"); } catch (e) {}
+if (draft && draft.settings) { fillForm(Object.assign({}, RECEIPT, draft.settings)); $("photos").value = draft.photos || 3; $("number").value = draft.number || 47; dirty = true; }
+else fillForm(RECEIPT);
+
+if (currentId != null) { const cur = sets.find(x => x.id === currentId); if (cur) $("set-name").value = cur.name; else currentId = null; }
+
+// ---- shared storage: the artifact's database when this page runs as an artifact ---------
+let dbc = null;
+function dbPut(x) { if (dbc) dbc.doc(x.id).set(x).catch(e => { $("status").textContent = "Saved here but not to the shared store: " + (e.message || e.code); $("status").className = "warn"; }); }
+function dbDel(id) { if (dbc) dbc.doc(id).delete().catch(() => {}); }
+function adoptFromDb(snap) {
+  const remote = snap.docs.filter(d => d.exists).map(d => d.data()).filter(x => x && x.settings);
+  if (!remote.length) return;
+  remote.sort((a, b) => String(a.saved || "").localeCompare(String(b.saved || "")));
+  sets = remote;
+  if (currentId != null && !sets.some(x => x.id === currentId)) { currentId = null; $("set-name").value = ""; }
+  try { localStorage.setItem("tape-bench-sets", JSON.stringify(sets)); } catch (e) {}
+  renderSets();
+}
+if (window.claude && window.claude.use) {
+  window.claude.use("db").then(async db => {
+    if (!db) return;
+    dbc = db.collection("iterations");
+    $("sets-where").textContent = "Saved with this artifact, so every device that opens it sees the same list.";
+    try {
+      const snap = await dbc.get();
+      if (snap.empty && sets.length) { for (const x of sets) await dbc.doc(x.id).set(x); }   // first run: carry the browser copies over
+      else adoptFromDb(snap);
+      dbc.onSnapshot(adoptFromDb, () => {});
+    } catch (e) { $("status").textContent = "Shared store unavailable: " + (e.message || e.code); $("status").className = "warn"; }
+  }).catch(() => {});
+}
+
+// ---- send to booth: only from the file copy (the artifact sandbox cannot reach the Pi) -----
+if (location.protocol === "file:") {
+  $("send-booth").hidden = false; $("booth-bar").hidden = false;
+  try { const u = localStorage.getItem("tape-bench-booth-url"); if (u) $("booth-url").value = u; } catch (e) {}
+  $("booth-url").addEventListener("change", () => { try { localStorage.setItem("tape-bench-booth-url", $("booth-url").value.trim()); } catch (e) {} });
+  $("send-booth").onclick = async () => {
+    const st = $("status"), base = $("booth-url").value.trim().replace(/\/+$/, "");
+    st.textContent = "Sending to the booth..."; st.className = "";
+    try {
+      const r = await fetch(base + "/save", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: collect(), photos: Number($("photos").value || 3), number: Number($("number").value || 0), photo_set: "placeholder" }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || r.statusText);
+      st.textContent = `Saved on the Pi as ${j.path}. The booth prints it from the next session on.`; st.className = "ok";
+    } catch (e) {
+      st.textContent = "Could not reach Receipt Studio at " + base + " (" + (e.message || e) + "). Start it with booth.sh studio on the Pi, or use Copy receipt.json."; st.className = "warn";
+    }
+  };
+}
+// ---- github mode: served from GitHub Pages, so a save becomes a commit in the repo ------
+// Nothing is configured by hand: <owner>.github.io/<repo>/ names the repo, and a save opens
+// GitHub's own editor with the file already filled in, so this page never holds a token.
+const GH = (() => {
+  const q = new URLSearchParams(location.search).get("repo");
+  if (q && /^[\w.-]+\/[\w.-]+$/.test(q)) { const [owner, repo] = q.split("/"); return { owner, repo, branch: "main" }; }
+  const m = /^([\w-]+)\.github\.io$/i.exec(location.hostname);
+  if (!m) return null;
+  const seg = location.pathname.split("/").filter(Boolean).filter(x => !/\.html?$/i.test(x));
+  return { owner: m[1], repo: seg.length ? seg[0] : m[1] + ".github.io", branch: "main" };
+})();
+if (GH && !(window.claude && window.claude.use)) {
+  const api = `https://api.github.com/repos/${GH.owner}/${GH.repo}`;
+  const slug = s => (s || "set").toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "set";
+  const stamp = d => d.toISOString().replace(/[-:]/g, "").slice(0, 13).replace("T", "-");
+
+  $("save-github").hidden = false; $("gh-reload").hidden = false;
+  $("sets-where").innerHTML = `Saved sets live in <b>${esc(GH.owner + "/" + GH.repo)}</b> under <code>sets/</code>, so everyone opening this page sees them. Save to GitHub fills in the commit for you.`;
+
+  // newest file wins per id, so re-saving a set under the same name updates it
+  const ghAdopt = incoming => {
+    let added = 0, updated = 0;
+    for (const x of incoming) {
+      if (!x || !x.settings) continue;
+      const cur = sets.find(y => y.id === x.id);
+      if (!cur) { sets.push(x); added++; }
+      else if (String(x.saved || "") > String(cur.saved || "")) { Object.assign(cur, x); updated++; }
+    }
+    if (added || updated) { persistSets(); renderSets(); }
+    return { added, updated };
+  };
+
+  const ghLoad = async quiet => {
+    const st = $("status");
+    if (!quiet) { st.textContent = "Reading sets from GitHub…"; st.className = ""; }
+    try {
+      const r = await fetch(`${api}/contents/sets?ref=${GH.branch}`, { headers: { Accept: "application/vnd.github+json" } });
+      if (r.status === 404) { if (!quiet) { st.textContent = "No sets/ folder in that repo yet — save one and it lands there."; st.className = "warn"; } return; }
+      if (!r.ok) throw new Error(r.status === 403 ? "GitHub is rate-limiting this network (60 reads an hour without signing in); try again shortly" : "GitHub answered " + r.status);
+      const files = (await r.json()).filter(f => f.type === "file" && /\.json$/i.test(f.name));
+      const texts = await Promise.all(files.map(async f => {
+        // the Pages copy is same-origin and unmetered; a file committed a minute ago is only on raw yet
+        for (const u of [`sets/${encodeURIComponent(f.name)}`, f.download_url]) {
+          try { const rr = await fetch(u, { cache: "no-cache" }); if (rr.ok) return rr.text(); } catch (e) {}
+        }
+        return null;
+      }));
+      const incoming = [];
+      for (const t of texts) {
+        if (!t) continue;
+        let d; try { d = JSON.parse(t); } catch (e) { continue; }
+        const list = Array.isArray(d) ? d : d.tape_bench_sets || (d.settings ? [d] : []);
+        for (const x of list) if (x && x.settings) incoming.push(Object.assign({}, x, { settings: Object.assign({}, RECEIPT, x.settings) }));
+      }
+      incoming.sort((a, b) => String(a.saved || "").localeCompare(String(b.saved || "")));
+      const { added, updated } = ghAdopt(incoming);
+      if (!quiet || added || updated) {
+        st.textContent = added || updated ? `From GitHub: ${added} new, ${updated} updated.`
+          : `Up to date with GitHub (${incoming.length} set${incoming.length === 1 ? "" : "s"}).`;
+        st.className = "ok";
+      }
+    } catch (e) {
+      if (!quiet) { st.textContent = "Could not read the repo: " + (e.message || e); st.className = "warn"; }
+    }
+  };
+  $("gh-reload").onclick = () => ghLoad(false);
+  ghLoad(true);
+
+  $("save-github").onclick = () => {
+    const st = $("status");
+    const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
+    const name = $("set-name").value.trim() || (cur ? cur.name : "");
+    if (!name) { st.textContent = "Name the iteration first, then Save to GitHub."; st.className = "warn"; $("set-name").focus(); return; }
+    const set = snapshot(name);
+    if (cur) set.id = cur.id;                                   // same id = an update of that set, not a rival
+    const path = `sets/${slug(name)}-${stamp(new Date())}.json`;
+    const base = `https://github.com/${GH.owner}/${GH.repo}/new/${GH.branch}?filename=${encodeURIComponent(path)}&value=`;
+    let url = base + encodeURIComponent(JSON.stringify({ tape_bench_sets: [set] }, null, 2));
+    if (url.length > 7000) url = base + encodeURIComponent(JSON.stringify({ tape_bench_sets: [set] }));
+    if (url.length > 7000) {                                    // too much decorative Unicode to hand over in a link
+      const text = JSON.stringify({ tape_bench_sets: [set] }, null, 2);
+      if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+      st.innerHTML = `This set is too long to pass through a link. It is on your clipboard — open <a href="https://github.com/${GH.owner}/${GH.repo}/new/${GH.branch}" target="_blank" rel="noopener">the new-file page</a>, name it <code>${esc(path)}</code> and paste.`;
+      st.className = "warn"; return;
+    }
+    ghAdopt([set]); currentId = set.id; setDirty = false; $("set-name").value = name; persistSets(); renderSets();
+    window.open(url, "_blank", "noopener");
+    st.innerHTML = `GitHub is open in a new tab with <code>${esc(path)}</code> filled in — press <b>Commit changes</b> there and it is saved. Without write access GitHub offers a pull request instead, which works just as well.`;
+    st.className = "ok";
+  };
+}
+
+const fontsReady = document.fonts ? Promise.all([document.fonts.load(`400 18px ${FONT}`), document.fonts.load(`700 18px ${FONT}`)]).catch(() => {}) : Promise.resolve();
+fontsReady.then(render);
+setTimeout(() => { if (!last) render(); }, 1500);      // render anyway if the font host is slow
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+{
+  "tape_bench_sets": [
+    {
+      "id": "swirl-pisafe16",
+      "name": "Photobooth swirl · Pi-safe ornaments",
+      "number": 47,
+      "photos": 3,
+      "rows": 1402,
+      "saved": "2026-09-06T04:55:00.000Z",
+      "settings": {
+        "address": [
+          "✧₊˚·⌒‿₊ ♥ ₊‿⌒·˚₊✧",
+          "{date:%m/%d/%Y} ✿ {date:%-I:%M %p}"
+        ],
+        "barcode": "{date:%y%m%d}{txn:04d}",
+        "barcode_caption": null,
+        "dither": true,
+        "fine_print": null,
+        "footer": [
+          "⋆ ˚ ʚ ♥ ɞ ˚ ⋆",
+          "⋆ ˚ ʚ NO REFUNDS ɞ ˚ ⋆"
+        ],
+        "items": [],
+        "margin": 12,
+        "meta": [],
+        "photo_aspect": [
+          4,
+          3
+        ],
+        "photo_border": 2,
+        "photo_item_price": "INCL",
+        "photo_item_qty": "1",
+        "photo_items": [
+          "GOOD TIMES",
+          "YOUR BEST SIDE",
+          "THE GOOFY ONE",
+          "ONE MORE TAKE"
+        ],
+        "photos_as_items": true,
+        "rule_dash": 6,
+        "rule_gap": 4,
+        "rule_pad": 8,
+        "rule_style": "text",
+        "rule_text": "- ",
+        "rule_thickness": 2,
+        "rules": [
+          "photos",
+          "table_top",
+          "items",
+          "total"
+        ],
+        "shop": "°⋆‧𓏲ּ𝄢 PHOTOBOOTH 𓏲ּ𝄢‧⋆°",
+        "shop_tracking": 4,
+        "size_body": 18,
+        "size_fine": 14,
+        "size_shop": 30,
+        "size_small": 16,
+        "size_total": 26,
+        "table_header": [
+          "QTY ITEM",
+          "PRICE"
+        ],
+        "torn_edges": true,
+        "total": [
+          "TOTAL",
+          "PRICELESS"
+        ],
+        "totals": [
+          [
+            "SUBTOTAL",
+            "MEMORIES"
+          ],
+          [
+            "SERVICE (INCL)",
+            "UNCONDITIONAL"
+          ]
+        ],
+        "width": 384
+      }
+    }
+  ]
+}
