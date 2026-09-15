@@ -6,50 +6,50 @@ what you see is what the paper gets.
 
 **Open it:** https://darknet-doll.github.io/receipt_photobooth/
 
-## For whoever is designing
+## Designing a receipt
 
-1. Open the page. The **Iterations** list already holds the saved sets from this repo —
-   click one to load it.
-2. Change whatever you like: shop name, the lines under each photo, rules, totals, type sizes.
-   The preview redraws as you type.
-3. Put a name in the box (keep the same name to update an existing set) and press
-   **Save to GitHub**.
-4. GitHub opens in a new tab with the file already filled in. Leave **Commit directly to the
-   `main` branch** selected and press **Commit changes**. Done — the set is saved for everyone.
+No account, no sign-in, nothing to install. Just open the link.
 
-You need a (free) GitHub account and an accepted invite to this repo. If GitHub offers you a
-pull request instead of a direct commit, the invite has not been accepted yet — check your
-email, accept it, and try again.
+1. The **Iterations** list on the left already holds the saved receipts — click one to load it.
+2. Change whatever you like: the shop name, the line under each photo, the rules, the totals,
+   the type sizes. The preview redraws as you type.
+3. Press **Send my receipt**. That's it — it goes straight to darknetdoll, who puts it on the
+   booth.
 
-That is the whole loop. Each save is a new timestamped file in [`sets/`](sets/); the newest
-file for a given set wins, so nothing is ever overwritten and every version stays in history.
+You can keep tweaking and send again as many times as you like. Your work also stays in your
+own browser, so you can close the tab and pick it up later.
 
-### Characters
+### Picking characters
 
-The left-hand palette is the set of glyphs the Pi can actually print, each one rendered on the
-Pi with the real receipt font and thresholded like a print. Anything outside that palette may
-come out as a tofu box on paper. A dashed box marked **16** means the glyph goes faint at the
-small-text size — use it on a bigger line instead.
+The palette down the left is every glyph the booth can actually print — each one was rendered on
+the printer itself and thresholded like a real print, so what you see is what the paper gets.
+Click a text field, then click a character to drop it in. Characters from outside that palette
+may come out as an empty box on paper. A dashed box marked **16** means the glyph goes faint at
+the small-text size — use it on a bigger line instead.
 
 ## For the booth owner
 
 The page is one file, `index.html`, and it behaves differently depending on where it is opened:
 
-| Opened from | Saving goes to | Extra |
-| --- | --- | --- |
-| GitHub Pages | this repo, via a commit you confirm | no token in the page |
-| the Claude artifact | the artifact's shared database | |
-| a local `file://` copy | the browser | **Send to booth** POSTs to Receipt Studio on the Pi |
+| Opened from | Saving goes to |
+| --- | --- |
+| GitHub Pages | emailed to you, via the form key in `config.json` |
+| GitHub Pages with `?github=1` | a commit in this repo, under `sets/` |
+| the Claude artifact | the artifact's shared database |
+| a local `file://` copy | the browser, plus **Send to booth** → Receipt Studio on the Pi |
+
+`config.json` holds the Web3Forms access key. It is public on purpose: the key only lets a
+submission reach your inbox, which is why this works where a GitHub token never could. Leave
+`form_key` empty and the Send button simply stays hidden.
 
 The source of truth is `software/tools/tape_bench.html` in the Photobooth project; `index.html`
-here is a copy. Do not edit it by hand — run `software/tools/deploy_bench_site.sh`, which
+here is a copy. Don't edit it by hand — run `software/tools/deploy_bench_site.sh`, which
 re-copies it and pushes.
 
-To put a set on the booth, pull the newest file out of `sets/` and write its `settings` to
-`~/photobooth/receipt.json` on the Pi. The booth re-reads that file at the start of every
-session, so no restart is needed.
+To put a received receipt on the booth, write its `settings` object to `~/photobooth/receipt.json`
+on the Pi. The booth re-reads that file at the start of every session, so no restart is needed.
 
 ## Note on what is public
 
-This repo is public, so everything committed to `sets/` is world-readable — receipt copy
-included. Keep names, addresses and anything personal out of the sets you save here.
+This repo is public, so anything committed to `sets/` is world-readable. Keep names, addresses
+and anything personal out of the receipts saved here.

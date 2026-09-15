@@ -225,6 +225,7 @@
     <button id="preset-birthday">Preset: birthday</button>
     <button id="reset-draft" title="Forget the draft saved in this browser">Discard draft</button>
     <button id="send-booth" hidden title="POST the current receipt to Receipt Studio on the Pi, which saves it as ~/photobooth/receipt.json">Send to booth</button>
+    <button class="primary" id="send-mail" hidden title="Send this receipt to the booth owner, who puts it on the printer">Send my receipt</button>
     <button id="save-github" hidden title="Write the current iteration into the repo this page is served from, as a commit you confirm on GitHub">Save to GitHub</button>
     <button id="download-png" title="The 384-dot raster, exactly what goes to the head">Download PNG</button>
     <button class="primary" id="copy-json">Copy receipt.json</button>
@@ -1185,6 +1186,56 @@ if (location.protocol === "file:") {
     }
   };
 }
+// ---- send by email: the visitor has no GitHub and no Claude account, so Save just sends -----
+// The form key lives in config.json beside the page. It only ever lets a submission reach the
+// owner's inbox, so it is safe in a public repo in a way a GitHub token would not be.
+if (location.protocol.startsWith("http") && !(window.claude && window.claude.use)) {
+  fetch("config.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).then(cfg => {
+    const key = cfg && cfg.form_key;
+    if (!key) return;                                    // not configured yet: leave the button hidden
+    const who = (cfg && cfg.owner_label) || "the booth owner";
+    const btn = $("send-mail");
+    btn.hidden = false;
+    btn.title = `Send this receipt to ${who}, who puts it on the printer`;
+
+    btn.onclick = async () => {
+      const st = $("status");
+      const cur = currentId != null ? sets.find(x => x.id === currentId) : null;
+      const name = $("set-name").value.trim() || (cur ? cur.name : "") ||
+        String(collect().shop || "").replace(/[^\w &'-]/g, "").trim() || "Untitled receipt";
+      const set = snapshot(name);
+      if (cur) set.id = cur.id;
+      btn.disabled = true;
+      st.textContent = "Sending…"; st.className = "";
+      try {
+        const r = await fetch("https://api.web3forms.com/submit", {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            access_key: key,
+            subject: `Tape Bench receipt: ${name}`,
+            from_name: "Tape Bench",
+            botcheck: "",
+            receipt_name: name,
+            note: `${set.photos} photo${set.photos === 1 ? "" : "s"}, about ${set.rows ? Math.round(set.rows / DPMM) : "?"} mm of paper.`,
+            message: JSON.stringify({ tape_bench_sets: [set] }, null, 2)
+          })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.success === false) throw new Error(j.message || ("the form service said " + r.status));
+        // keep it in this browser too, so she can pick it up again and carry on
+        currentId = set.id; setDirty = false; $("set-name").value = name;
+        if (!sets.some(x => x.id === set.id)) sets.push(set); else Object.assign(sets.find(x => x.id === set.id), set);
+        persistSets(); renderSets();
+        st.innerHTML = `Sent — <b>${esc(name)}</b> is on its way to ${esc(who)}, who will put it on the booth. You can keep tweaking and send again.`;
+        st.className = "ok";
+      } catch (e) {
+        st.innerHTML = `Could not send it: ${esc(String(e.message || e))}. Your work is safe in this browser — try again in a moment, or use <b>Export all</b> and send the file instead.`;
+        st.className = "warn";
+      } finally { btn.disabled = false; }
+    };
+  }).catch(() => {});
+}
+
 // ---- github mode: served from GitHub Pages, so a save becomes a commit in the repo ------
 // Nothing is configured by hand: <owner>.github.io/<repo>/ names the repo, and a save opens
 // GitHub's own editor with the file already filled in, so this page never holds a token.
@@ -1201,7 +1252,8 @@ if (GH && !(window.claude && window.claude.use)) {
   const slug = s => (s || "set").toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "set";
   const stamp = d => d.toISOString().replace(/[-:]/g, "").slice(0, 13).replace("T", "-");
 
-  $("save-github").hidden = false; $("gh-reload").hidden = false;
+  const ghOwnerMode = new URLSearchParams(location.search).get("github") === "1";
+  $("save-github").hidden = !ghOwnerMode; $("gh-reload").hidden = !ghOwnerMode;
   $("sets-where").innerHTML = `Saved sets live in <b>${esc(GH.owner + "/" + GH.repo)}</b> under <code>sets/</code>, so everyone opening this page sees them. Save to GitHub fills in the commit for you.`;
 
   // newest file wins per id, so re-saving a set under the same name updates it

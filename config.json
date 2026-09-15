@@ -1,0 +1,5 @@
+{
+  "_note": "form_key is a Web3Forms access key. It only lets a submission reach the owner's inbox, so it is safe in a public repo. Empty = the Send button stays hidden.",
+  "form_key": "",
+  "owner_label": "darknetdoll"
+}
