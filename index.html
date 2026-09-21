@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Receipt Photobooth</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87.5,400;87.5,500;87.5,600;87.5,700;100,400;100,500;100,600&family=Cousine:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87.5,400;87.5,500;87.5,600;87.5,700;100,400;100,500;100,600&family=Cousine:wght@400;700&family=Noto+Serif:wght@700&display=swap">
 <style>
   :root {
     --ground: #ebe7ee;
@@ -227,12 +227,15 @@
 <body>
 <header>
   <div>
-    <h1>Design your receipt!</h1>
-    <div class="sub">Change the text, title, number of photos below, then save and send!</div>
+    <h1 id="title">Design your receipt!</h1>
+    <div class="sub" id="subtitle">Change the text, title, number of photos below, then save and send!</div>
   </div>
   <div class="actions">
+    <label style="margin-right:6px">layout
+      <select id="layout" style="margin:0"><option value="receipt">Receipt tape</option><option value="film">Film strip</option></select></label>
     <button id="preset-receipt">Preset: receipt</button>
     <button id="preset-birthday">Preset: birthday</button>
+    <button id="preset-film" hidden>Preset: film</button>
     <button id="reset-draft" title="Forget the draft saved in this browser">Discard draft</button>
     <button id="send-booth" hidden title="POST the current receipt to Receipt Studio on the Pi, which saves it as ~/photobooth/receipt.json">Send to booth</button>
     <button class="primary" id="send-mail" hidden title="Send this receipt to the booth owner, who puts it on the printer">Send my receipt</button>
@@ -382,7 +385,7 @@ const BIRTHDAY = Object.assign({}, RECEIPT, {
   fine_print: null, barcode: "{txn:04d}", barcode_caption: "* birthday barcode *",
 });
 const PRESETS = { receipt: RECEIPT, birthday: BIRTHDAY };
-const PHOTO_DEFAULT = { receipt: 3, birthday: 1 };
+const PHOTO_DEFAULT = { receipt: 3, birthday: 1, film: 4 };
 
 // Code 39: 9 elements per character (bar, space, bar, ...), 1 = wide.
 const CODE39 = {
@@ -709,6 +712,7 @@ function charsetRanges(str) {
 const MONO_RANGES = charsetRanges(PI_MONO), ANY_RANGES = charsetRanges(PI_ANY);
 function inRanges(cp, ranges) { let lo = 0, hi = ranges.length - 1; while (lo <= hi) { const m = (lo + hi) >> 1; if (cp < ranges[m][0]) hi = m - 1; else if (cp > ranges[m][1]) lo = m + 1; else return true; } return false; }
 function glyphReport(s) {
+  if (!s) { const el = $("glyphs"); if (el) el.hidden = true; return; }
   const fallback = new Set(), missing = new Set();
   const texts = [s.shop, ...s.address, ...s.meta.flat(), ...(s.table_header || []), ...s.photo_items, s.photo_item_qty, s.photo_item_price,
     ...s.items.flat(), ...s.totals.flat(), ...(s.total || []), ...s.footer, s.barcode_caption || "", s.fine_print || "", s.rule_style === "text" ? s.rule_text : ""];
@@ -817,9 +821,220 @@ const FIELDS = [
 ];
 const NULLABLE = new Set(["table_header", "total", "barcode", "barcode_caption", "fine_print"]);
 
+// ---- the film strip: booth/film.py in canvas ------------------------------------
+// The Pi sets the rail in DejaVu Serif Bold, which is not a web font. Noto Serif is the
+// closest stand-in here, so a name that only just fits on this page may not on the Pi;
+// the readout says how much room is left for exactly that reason.
+const SERIF = '"Noto Serif", "DejaVu Serif", Georgia, serif';
+
+const FILM = {
+  width: WIDTH, rail_left: 48, rail_right: 48,
+  left_style: "sprockets", right_style: "text",
+  frame_inset: 8, frame_gap: 14, frame_radius: 16, frame_aspect: [1, 1], frame_keyline: 2,
+  end_pad: 22, base: "outline", rail_fill: "solid",
+  hole_w: 22, hole_h: 18, hole_radius: 5, hole_pitch: 34, hole_stroke: 0,
+  ornament: "heart", ornament_size: 26,
+  names: "ME & YOU", date_format: "{date:%m.%d.%Y}",
+  name_size: 34, date_size: 28, name_tracking: 5, text_gap: 46, serif: true,
+  text_rail_marks: false, text_rail_sprockets: true, text_clear: 4,
+  dither: true, caption: null,
+};
+const FILM_BASES = [["outline", "outline — drawn on paper"], ["rails", "rails — black rails only"], ["full", "full — black tape"]];
+const FILM_FILLS = [["solid", "solid"], ["half", "half (checkerboard)"], ["quarter", "quarter"]];
+const FILM_RAILS = [["sprockets", "sprockets"], ["text", "names + date"], ["marks", "edge bars"], ["plain", "nothing"]];
+
+function roundRectPath(g, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, Math.floor(Math.min(w, h) / 2)));
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+function screenStyle(g, fill) {                  // the film base: solid, or a dither screen
+  if (fill !== "half" && fill !== "quarter") return "#000";
+  const c = document.createElement("canvas"); c.width = c.height = 2;
+  const cg = c.getContext("2d");
+  cg.fillStyle = "#fff"; cg.fillRect(0, 0, 2, 2);
+  cg.fillStyle = "#000";
+  cg.fillRect(0, 0, 1, 1);
+  if (fill === "half") cg.fillRect(1, 1, 1, 1);
+  return g.createPattern(c, "repeat");
+}
+function verticalRun(text, size, bold, tracking, color, serif) {
+  // one line laid on its side; the canvas is drawn upright and blitted rotated
+  const css = `${bold ? 700 : 400} ${size}px ${serif ? SERIF : FONT}`;
+  const probe = document.createElement("canvas").getContext("2d");
+  probe.font = css;
+  const chars = [...text];
+  const widths = chars.map(ch => probe.measureText(ch).width);
+  const m = probe.measureText("Hg");
+  const asc = Math.round(m.fontBoundingBoxAscent || size * 0.93);
+  const desc = Math.round(m.fontBoundingBoxDescent || size * 0.24);
+  const w = Math.ceil(widths.reduce((a, b) => a + b, 0)) + tracking * Math.max(chars.length - 1, 0) + 4;
+  const c = document.createElement("canvas"); c.width = Math.max(1, w); c.height = asc + desc + 4;
+  const g = c.getContext("2d");
+  g.font = css; g.fillStyle = color; g.textBaseline = "alphabetic";
+  let x = 2;
+  chars.forEach((ch, i) => { g.fillText(ch, x, 2 + asc); x += widths[i] + tracking; });
+  return { canvas: c, rotated: true, length: c.width, across: c.height };
+}
+function heartRun(size, color) {
+  // upright in the strip's frame, deliberately not turned with the type (see film.py)
+  const s4 = size * 4, r = Math.floor(s4 / 4);
+  const big = document.createElement("canvas"); big.width = big.height = s4;
+  const bg = big.getContext("2d");
+  bg.fillStyle = color;
+  bg.beginPath(); bg.arc(r, 1.5 * r, r, 0, Math.PI * 2); bg.fill();
+  bg.beginPath(); bg.arc(3 * r, 1.5 * r, r, 0, Math.PI * 2); bg.fill();
+  bg.beginPath(); bg.moveTo(0, 1.5 * r); bg.lineTo(s4 / 2, s4 - 1); bg.lineTo(s4, 1.5 * r); bg.closePath(); bg.fill();
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(big, 0, 0, size, size);
+  return { canvas: c, rotated: false, length: size, across: size };
+}
+
+function makeFilmStrip(photos, s, when) {
+  const n = photos.length;
+  const windowW = s.width - s.rail_left - s.rail_right;
+  const frameW = windowW - 2 * s.frame_inset;
+  if (frameW < 40) throw new Error(`the rails leave only ${Math.max(frameW, 0)} dots for the picture — narrow them`);
+  const frameH = Math.round(frameW * s.frame_aspect[1] / s.frame_aspect[0]);
+  const rows = 2 * s.end_pad + n * frameH + (n - 1) * s.frame_gap;
+
+  const capSize = 20, capPad = 24;
+  const capH = s.caption ? capSize + capPad : 0;
+  const c = document.createElement("canvas"); c.width = s.width; c.height = rows + capH;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+
+  const holeInk = s.base === "outline" ? "#000" : "#fff";      // a hole is the absence of film
+  const keyInk = s.base === "full" ? "#fff" : "#000";          // the keyline contrasts with what the frame sits on
+  if (s.base === "outline") {
+    g.strokeStyle = "#000"; g.lineWidth = 3; g.strokeRect(1.5, 1.5, s.width - 3, rows - 3);
+  } else if (s.base === "rails") {
+    g.fillStyle = screenStyle(g, s.rail_fill);
+    g.fillRect(0, 0, s.rail_left, rows); g.fillRect(s.width - s.rail_right, 0, s.rail_right, rows);
+  } else {
+    g.fillStyle = screenStyle(g, s.rail_fill); g.fillRect(0, 0, s.width, rows);
+  }
+
+  const sprockets = (cx, skip) => {
+    const first = s.end_pad + Math.floor((s.hole_pitch - s.hole_h) / 2);
+    for (let y = first; y < rows - s.end_pad - s.hole_h; y += Math.max(1, s.hole_pitch)) {
+      if (skip && y + s.hole_h > skip[0] && y < skip[1]) continue;
+      roundRectPath(g, cx - Math.floor(s.hole_w / 2), y, s.hole_w, s.hole_h, s.hole_radius);
+      if (s.hole_stroke) { g.strokeStyle = holeInk; g.lineWidth = s.hole_stroke; g.stroke(); }
+      else { g.fillStyle = holeInk; g.fill(); }
+    }
+  };
+  const bars = (cx, y, mw, count) => {
+    g.fillStyle = holeInk;
+    for (let i = 0; i < count; i++) g.fillRect(cx - Math.floor(mw / 2), y + i * 9, mw, 5);
+  };
+  const MARKS = [[0.06, 20, 4], [0.21, 14, 2], [0.38, 20, 3], [0.53, 14, 2], [0.69, 20, 4], [0.86, 14, 3]];
+
+  let extent = null;                                  // how far the rail type runs, for the readout
+  const rail = (x0, x1, style) => {
+    const cx = Math.floor((x0 + x1) / 2);
+    if (style === "sprockets") { sprockets(cx); return; }
+    if (style === "marks") { for (const [pos, mw, count] of MARKS) bars(cx, Math.round(pos * rows), mw, count); return; }
+    if (style !== "text") return;
+    const runs = [];
+    if (s.names) runs.push(verticalRun(s.names, s.name_size, true, s.name_tracking, holeInk, s.serif));
+    if (s.ornament === "heart" && runs.length) runs.push(heartRun(s.ornament_size, holeInk));
+    if (s.date_format) runs.push(verticalRun(fill(s.date_format, { date: when }), s.date_size, true, s.name_tracking, holeInk, s.serif));
+    if (!runs.length) return;
+    const widest = Math.max(...runs.map(r => r.across));
+    if (widest > x1 - x0) throw new Error(`the type is ${widest} dots across and the rail is ${x1 - x0}: widen the rail or drop the type size`);
+    const total = runs.reduce((a, r) => a + r.length, 0) + s.text_gap * (runs.length - 1);
+    const room = rows - 2 * s.end_pad;
+    if (total > room) throw new Error(`the type runs ${total} dots down a ${room} dot rail: shorten the names, drop the type size, or add a photo`);
+    extent = [total, room];
+    let y = Math.max(s.end_pad, Math.floor((rows - total) / 2));
+    const top = y;
+    if (s.text_rail_marks) bars(cx, top - 46, 20, 4);
+    for (const r of runs) {
+      const x = x0 + Math.floor((x1 - x0 - r.across) / 2);
+      if (r.rotated) { g.save(); g.translate(x + r.canvas.height, y); g.rotate(Math.PI / 2); g.drawImage(r.canvas, 0, 0); g.restore(); }
+      else g.drawImage(r.canvas, x, y);
+      y += r.length + s.text_gap;
+    }
+    const bottom = y - s.text_gap;
+    if (s.text_rail_marks) bars(cx, bottom + 20, 14, 3);
+    if (s.text_rail_sprockets) sprockets(cx, [top - s.text_clear, bottom + s.text_clear]);
+  };
+  rail(0, s.rail_left, s.left_style);
+  rail(s.width - s.rail_right, s.width, s.right_style);
+
+  let y = s.end_pad;
+  const x = s.rail_left + s.frame_inset;
+  for (const p of photos) {
+    const bits = preparePhoto(p, frameW, frameH, s.dither);
+    const tile = document.createElement("canvas"); tile.width = frameW; tile.height = frameH;
+    const tg = tile.getContext("2d"), img = tg.createImageData(frameW, frameH), d = img.data;
+    for (let i = 0; i < frameW * frameH; i++) {
+      const v = bits[i] ? 0 : 255;
+      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255;
+    }
+    tg.putImageData(img, 0, 0);
+    g.save(); roundRectPath(g, x, y, frameW, frameH, s.frame_radius); g.clip(); g.drawImage(tile, x, y); g.restore();
+    if (s.frame_keyline) {
+      roundRectPath(g, x - 1, y - 1, frameW + 2, frameH + 2, s.frame_radius);
+      g.strokeStyle = keyInk; g.lineWidth = s.frame_keyline; g.stroke();
+    }
+    y += frameH + s.frame_gap;
+  }
+
+  if (s.caption) {
+    g.fillStyle = "#000"; g.font = `700 ${capSize}px ${FONT}`; g.textBaseline = "alphabetic";
+    const w = g.measureText(s.caption).width;
+    g.fillText(s.caption, Math.max(0, (s.width - w) / 2), rows + capPad / 2 + capSize);
+  }
+
+  const total = rows + capH;
+  const data = g.getImageData(0, 0, s.width, total).data;
+  const bits = new Uint8Array(s.width * total);
+  let black = 0;
+  for (let i = 0; i < bits.length; i++) { const v = data[i * 4] < 128 ? 1 : 0; bits[i] = v; black += v; }
+  return { bits, rows: total, black, extent };
+}
+
+const FILM_FIELDS = [
+  { group: "The rail" },
+  { k: "names", t: "text", label: "Names up the rail", small: "set on its side; the readout says how much room is left" },
+  { k: "date_format", t: "text", label: "Date line", small: "blank for none" },
+  { row: [{ k: "ornament", t: "boolstr", on: "heart", label: "Heart between them" }, { k: "serif", t: "bool", label: "Serif type" }] },
+  { row: [{ k: "name_size", t: "num", label: "Name size (dots)" }, { k: "date_size", t: "num", label: "Date size (dots)" }] },
+  { row3: [{ k: "name_tracking", t: "num", label: "Letter spacing" }, { k: "text_gap", t: "num", label: "Gap between runs" }, { k: "text_clear", t: "num", label: "Clear of the holes" }] },
+  { row: [{ k: "text_rail_sprockets", t: "bool", label: "Perforate the text rail too" }, { k: "text_rail_marks", t: "bool", label: "Edge bars around the type" }] },
+  { group: "Perforations" },
+  { row: [{ k: "left_style", t: "select", label: "Left rail", options: FILM_RAILS }, { k: "right_style", t: "select", label: "Right rail", options: FILM_RAILS }] },
+  { row3: [{ k: "hole_w", t: "num", label: "Hole width" }, { k: "hole_h", t: "num", label: "Hole height" }, { k: "hole_pitch", t: "num", label: "Pitch", small: "hole height + gap" }] },
+  { row: [{ k: "hole_radius", t: "num", label: "Hole corner radius" }, { k: "hole_stroke", t: "num", label: "Draw as a ring (dots)", small: "0 fills the hole" }] },
+  { group: "The film base" },
+  { row: [{ k: "base", t: "select", label: "Base", options: FILM_BASES }, { k: "rail_fill", t: "select", label: "Ink of the base", options: FILM_FILLS }] },
+  { group: "Frames" },
+  { row3: [{ k: "frame_aspect", t: "aspect", label: "Frame w:h" }, { k: "frame_inset", t: "num", label: "Inset from the rail" }, { k: "frame_gap", t: "num", label: "Gap between frames" }] },
+  { row3: [{ k: "frame_radius", t: "num", label: "Corner radius" }, { k: "frame_keyline", t: "num", label: "Keyline (dots)" }, { k: "end_pad", t: "num", label: "End pad" }] },
+  { row3: [{ k: "rail_left", t: "num", label: "Left rail width" }, { k: "rail_right", t: "num", label: "Right rail width" }, { k: "ornament_size", t: "num", label: "Heart size" }] },
+  { row: [{ k: "dither", t: "bool", label: "Dither photos (Floyd–Steinberg)" }, { k: "caption", t: "text", label: "Caption under the film", small: "blank for none" }] },
+];
+const FILM_NULLABLE = new Set(["caption", "date_format"]);
+
+// ---- which layout is being edited ------------------------------------------------
+let layout = "receipt";
+const FIELD_SETS = { receipt: FIELDS, film: FILM_FIELDS };
+const BASE_SETTINGS = { receipt: RECEIPT, film: FILM };
+const nullableFor = k => (layout === "film" ? FILM_NULLABLE : NULLABLE).has(k);
+
+
 function fieldHtml(f) {
   const small = f.small ? ` <small>${f.small}</small>` : "";
-  if (f.t === "bool") return `<label class="check"><input type="checkbox" id="f_${f.k}"> ${f.label}</label>`;
+  if (f.t === "bool" || f.t === "boolstr") return `<label class="check"><input type="checkbox" id="f_${f.k}"> ${f.label}</label>`;
   if (f.t === "select") return `<label>${f.label}${small}<select id="f_${f.k}">${f.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></label>`;
   if (f.t === "multi") return `<div class="multi" id="f_${f.k}"><label>${f.label}${small}</label>${f.options.map(([v, l]) => `<label class="check"><input type="checkbox" value="${v}"> <span><b>${v.replace("_", " ")}</b> <small>${l}</small></span></label>`).join("")}</div>`;
   if (f.t === "lines" || f.t === "pairs") return `<label>${f.label}${small}<textarea id="f_${f.k}" rows="3"></textarea></label>`;
@@ -828,26 +1043,31 @@ function fieldHtml(f) {
 }
 function build() {
   let html = "";
-  for (const f of FIELDS) {
+  for (const f of FIELD_SETS[layout]) {
     if (f.group) html += `<h2>${f.group}</h2>`;
     else if (f.row) html += `<div class="row">${f.row.map(fieldHtml).join("")}</div>`;
     else if (f.row3) html += `<div class="row3">${f.row3.map(fieldHtml).join("")}</div>`;
     else html += fieldHtml(f);
   }
-  html += `<div class="hint">Placeholders work in any text: <code>{date:%m/%d/%Y}</code>, <code>{date:%-I:%M %p}</code>,
-    <code>{date:%B %-d, %Y}</code>, <code>{txn:04d}</code> (order number), <code>{n}</code> (photo count).
-    Sizes are printer dots: 8 dots = 1 mm, 384 dots across. Text on the Pi is DejaVu Sans Mono; here it is Cousine, the same 0.6 em advance, so line breaks and clipping match to within a dot or two.</div>`;
+  html += layout === "film"
+    ? `<div class="hint">The date line takes <code>{date:%m.%d.%Y}</code> and the rest of strftime.
+       Sizes are printer dots: 8 dots = 1 mm, 384 dots across, so the two rails and the picture between
+       them have to come to 384. The Pi sets the rail in DejaVu Serif Bold; here it is Noto Serif, close
+       but not identical, so leave a little room rather than filling the rail exactly.</div>`
+    : `<div class="hint">Placeholders work in any text: <code>{date:%m/%d/%Y}</code>, <code>{date:%-I:%M %p}</code>,
+       <code>{date:%B %-d, %Y}</code>, <code>{txn:04d}</code> (order number), <code>{n}</code> (photo count).
+       Sizes are printer dots: 8 dots = 1 mm, 384 dots across. Text on the Pi is DejaVu Sans Mono; here it is Cousine, the same 0.6 em advance, so line breaks and clipping match to within a dot or two.</div>`;
   form.innerHTML = html;
   form.addEventListener("input", () => { dirty = true; schedule(); });
 }
-const allFields = () => FIELDS.flatMap(f => f.row || f.row3 || (f.k ? [f] : []));
+const allFields = () => FIELD_SETS[layout].flatMap(f => f.row || f.row3 || (f.k ? [f] : []));
 const pairText = p => p ? `${p[0]} | ${p[1]}` : "";
 const parsePair = s => { const i = s.indexOf("|"); return i < 0 ? [s.trim(), ""] : [s.slice(0, i).trimEnd(), s.slice(i + 1).trimStart()]; };
 
 function fillForm(s) {
   for (const f of allFields()) {
     const el = $("f_" + f.k), v = s[f.k];
-    if (f.t === "bool") el.checked = !!v;
+    if (f.t === "bool" || f.t === "boolstr") el.checked = !!v;
     else if (f.t === "multi") { for (const cb of el.querySelectorAll("input")) cb.checked = (v || []).includes(cb.value); }
     else if (f.t === "select") el.value = f.options.some(([o]) => o === v) ? v : f.options[0][0];
     else if (f.t === "lines") el.value = (v || []).join("\n");
@@ -861,7 +1081,8 @@ function collect() {
   const s = { width: WIDTH };
   for (const f of allFields()) {
     const el = $("f_" + f.k), v = el.value;
-    if (f.t === "bool") s[f.k] = el.checked;
+    if (f.t === "boolstr") s[f.k] = el.checked ? f.on : null;
+    else if (f.t === "bool") s[f.k] = el.checked;
     else if (f.t === "multi") s[f.k] = [...el.querySelectorAll("input:checked")].map(cb => cb.value);
     else if (f.t === "select") s[f.k] = el.value;
     else if (f.t === "num") s[f.k] = Math.max(0, Number(v || 0));
@@ -869,13 +1090,46 @@ function collect() {
     else if (f.t === "pairs") s[f.k] = v.split("\n").filter(l => l.trim() !== "").map(parsePair);
     else if (f.t === "pair") s[f.k] = v.trim() === "" ? null : parsePair(v);
     else if (f.t === "aspect") { const m = v.match(/(\d+)\D+(\d+)/); s[f.k] = m ? [Number(m[1]), Number(m[2])] : [4, 3]; }
-    else s[f.k] = (v === "" && NULLABLE.has(f.k)) ? null : v;
+    else s[f.k] = (v === "" && nullableFor(f.k)) ? null : v;
+  }
+  if (layout === "film") {
+    // keep the strip printable: the two rails must leave a picture between them
+    s.rail_left = Math.min(s.rail_left, 150);
+    s.rail_right = Math.min(s.rail_right, 150);
+    s.frame_aspect = s.frame_aspect.map(x => Math.max(1, x));
+    s.hole_pitch = Math.max(1, s.hole_pitch);
+    for (const k of ["name_size", "date_size"]) s[k] = Math.max(6, s[k]);
+    s.marks = FILM.marks;
+    return s;
   }
   // keep the tape printable: margin leaves room, sizes are at least legible on paper
   s.margin = Math.min(s.margin, 120);
   s.photo_aspect = s.photo_aspect.map(x => Math.max(1, x));
   for (const k of ["size_shop", "size_small", "size_body", "size_total", "size_fine"]) s[k] = Math.max(6, s[k]);
   return s;
+}
+
+const HEADINGS = {
+  receipt: ["Design your receipt!", "Change the text, title, number of photos below, then save and send!"],
+  film: ["Design your film strip!", "Put your names up the rail, pick the frames, then save and send!"],
+};
+function applyHeading() {
+  $("title").textContent = HEADINGS[layout][0];
+  $("subtitle").textContent = HEADINGS[layout][1];
+}
+function switchLayout(next, settings) {
+  layout = next;
+  const sel = $("layout"); if (sel) sel.value = next;
+  applyHeading();
+  $("preset-receipt").hidden = next === "film";
+  $("preset-birthday").hidden = next === "film";
+  $("preset-film").hidden = next !== "film";
+  $("order-field").hidden = next === "film";        // a film strip carries no order number
+  $("chars").hidden = next === "film";              // the glyph palette is for the mono receipt face
+  build();
+  fillForm(Object.assign({}, BASE_SETTINGS[next], settings || {}));
+  if (!settings) $("photos").value = next === "film" ? 4 : 3;
+  render();
 }
 
 // ---- preview ---------------------------------------------------------------------
@@ -893,16 +1147,32 @@ function schedule() { clearTimeout(timer); timer = setTimeout(render, 250); }
 
 function render() {
   const s = collect();
-  try { localStorage.setItem("tape-bench-draft", JSON.stringify({ settings: s, photos: $("photos").value, number: $("number").value })); } catch (e) {}
+  try { localStorage.setItem("tape-bench-draft", JSON.stringify({ layout, settings: s, photos: $("photos").value, number: $("number").value })); } catch (e) {}
   const photos = samplePhotos(Number($("photos").value || 3));
   const number = Number($("number").value || 0);
-  last = makeReceipt(photos, s, new Date(), number);
+  if (layout === "film") {
+    try { last = makeFilmStrip(photos, s, new Date()); }
+    catch (e) {                                   // refuse rather than print a cropped letter
+      const st = $("status");
+      st.textContent = `This will not print: ${e.message}`; st.className = "warn";
+      return;
+    }
+  } else {
+    last = makeReceipt(photos, s, new Date(), number);
+  }
   last.settings = s;
-  glyphReport(s);
+  glyphReport(layout === "film" ? null : s);
   draw();
   readouts();
-  $("json").value = JSON.stringify(s, null, 2);
+  $("json").value = JSON.stringify(layout === "film" ? Object.assign({ layout: "film" }, s) : s, null, 2);
   const st = $("status");
+  if (layout === "film" && last.extent) {
+    const [run, room] = last.extent;
+    st.textContent = `The rail type runs ${run} of ${room} dots; ${room - run} to spare.`;
+    st.className = room - run < 60 ? "warn" : "";
+    renderSets();
+    return;
+  }
   if (last.rows / DPMM > 300) { st.textContent = `${(last.rows / DPMM).toFixed(0)} mm is a long receipt; the roll only holds about 10 m.`; st.className = "warn"; }
   else if (currentId != null) {
     const cur = sets.find(x => x.id === currentId);
@@ -921,7 +1191,7 @@ function persistSets() {
   try { localStorage.setItem("tape-bench-sets", JSON.stringify(sets)); localStorage.setItem("tape-bench-current", JSON.stringify(currentId)); } catch (e) {}
 }
 function snapshot(name) {
-  return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name,
+  return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, layout,
     settings: collect(), photos: Number($("photos").value || 3), number: Number($("number").value || 0),
     rows: last ? last.rows : null, saved: new Date().toISOString() };
 }
@@ -940,8 +1210,10 @@ function saveSet() {                        // every save is a new entry - nothi
 }
 function loadSet(id) {
   const x = sets.find(y => y.id === id); if (!x) return;
-  fillForm(Object.assign({}, RECEIPT, x.settings));
-  $("photos").value = x.photos || 3; $("number").value = x.number || 0;
+  const want = x.layout || "receipt";                      // sets saved before the film strip are receipts
+  if (want !== layout) switchLayout(want, x.settings);
+  else fillForm(Object.assign({}, BASE_SETTINGS[want], x.settings));
+  $("photos").value = x.photos || PHOTO_DEFAULT[want]; $("number").value = x.number || 0;
   currentId = id; setDirty = false; dirty = true; $("set-name").value = x.name; persistSets();
   render();
 }
@@ -1072,11 +1344,17 @@ function readouts() {
 
 // ---- wiring ----------------------------------------------------------------------
 function loadPreset(name) {
-  fillForm(PRESETS[name]); $("photos").value = PHOTO_DEFAULT[name]; dirty = true; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); render();
+  fillForm(name === "film" ? FILM : PRESETS[name]);
+  $("photos").value = PHOTO_DEFAULT[name]; dirty = true; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); render();
 }
 $("preset-receipt").onclick = () => loadPreset("receipt");
 $("preset-birthday").onclick = () => loadPreset("birthday");
-$("reset-draft").onclick = () => { try { localStorage.removeItem("tape-bench-draft"); } catch (e) {} dirty = false; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); fillForm(RECEIPT); $("photos").value = 3; render(); };
+$("preset-film").onclick = () => loadPreset("film");
+$("layout").onchange = (e) => {
+  currentId = null; setDirty = false; $("set-name").value = ""; persistSets();
+  switchLayout(e.target.value, null);
+};
+$("reset-draft").onclick = () => { try { localStorage.removeItem("tape-bench-draft"); } catch (e) {} dirty = false; currentId = null; setDirty = false; $("set-name").value = ""; persistSets(); switchLayout(layout, null); };
 $("copy-json").onclick = async () => {
   const text = $("json").value, st = $("status");
   try { await navigator.clipboard.writeText(text); st.textContent = "Copied. On the Pi, save it as ~/photobooth/receipt.json and restart the booth."; st.className = "ok"; }
@@ -1148,8 +1426,31 @@ $("clear-uploads").onclick = e => { e.stopPropagation(); uploads = []; refreshSe
 build();
 let draft = null;
 try { draft = JSON.parse(localStorage.getItem("tape-bench-draft") || "null"); } catch (e) {}
-if (draft && draft.settings) { fillForm(Object.assign({}, RECEIPT, draft.settings)); $("photos").value = draft.photos || 3; $("number").value = draft.number || 47; dirty = true; }
-else fillForm(RECEIPT);
+// ?layout=film opens straight on the film strip, so a link can point at either one
+const wanted = new URLSearchParams(location.search).get("layout");
+if (wanted === "film" || wanted === "receipt") {
+  layout = wanted;
+  build();
+  fillForm(BASE_SETTINGS[layout]);
+  $("layout").value = layout;
+  $("preset-receipt").hidden = $("preset-birthday").hidden = layout === "film";
+  $("preset-film").hidden = layout !== "film";
+  $("order-field").hidden = $("chars").hidden = layout === "film";
+  $("photos").value = PHOTO_DEFAULT[layout];
+  applyHeading();
+} else if (draft && draft.settings) {
+  layout = draft.layout === "film" ? "film" : "receipt";
+  build();
+  fillForm(Object.assign({}, BASE_SETTINGS[layout], draft.settings));
+  $("layout").value = layout;
+  $("preset-receipt").hidden = $("preset-birthday").hidden = layout === "film";
+  $("preset-film").hidden = layout !== "film";
+  $("order-field").hidden = $("chars").hidden = layout === "film";
+  $("photos").value = draft.photos || PHOTO_DEFAULT[layout];
+  $("number").value = draft.number || 47;
+  applyHeading();
+  dirty = true;
+} else fillForm(RECEIPT);
 
 if (currentId != null) { const cur = sets.find(x => x.id === currentId); if (cur) $("set-name").value = cur.name; else currentId = null; }
 
