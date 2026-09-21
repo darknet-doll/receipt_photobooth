@@ -822,9 +822,9 @@ const FIELDS = [
 const NULLABLE = new Set(["table_header", "total", "barcode", "barcode_caption", "fine_print"]);
 
 // ---- the film strip: booth/film.py in canvas ------------------------------------
-// The Pi sets the rail in DejaVu Serif Bold, which is not a web font. Noto Serif is the
-// closest stand-in here, so a name that only just fits on this page may not on the Pi;
-// the readout says how much room is left for exactly that reason.
+// The Pi sets the rail in DejaVu Serif Bold, which is not a web font. Noto Serif stands in for
+// the SHAPES; every measurement that decides whether a name fits comes from PI_SERIF below,
+// read off the Pi, so this page refuses exactly what the printer refuses.
 const SERIF = '"Noto Serif", "DejaVu Serif", Georgia, serif';
 
 const FILM = {
@@ -863,22 +863,44 @@ function screenStyle(g, fill) {                  // the film base: solid, or a d
   if (fill === "half") cg.fillRect(1, 1, 1, 1);
   return g.createPattern(c, "repeat");
 }
+// DejaVu Serif Bold as the Pi measures it — ascent+descent per point size, and the advance of
+// every printable ASCII character at 100 px. Read off the Pi itself on 2026-09-21, because no
+// browser has this face: a substitute serif measures the same string several dots wider, which
+// made this page refuse a rail that the printer accepts. Shapes below are a stand-in; the
+// FOOTPRINT is the Pi's.
+const PI_SERIF = {"h":{"8":10,"9":12,"10":13,"11":14,"12":15,"13":17,"14":18,"15":19,"16":20,"17":21,"18":22,"19":23,"20":24,"21":25,"22":27,"23":28,"24":29,"25":30,"26":32,"27":33,"28":34,"29":35,"30":37,"31":38,"32":39,"33":39,"34":41,"35":42,"36":43,"37":44,"38":45,"39":47,"40":48,"41":49,"42":50,"43":52,"44":53,"45":54,"46":55,"47":57,"48":58,"49":59,"50":59,"51":61,"52":62,"53":63,"54":64,"55":65,"56":67,"57":68,"58":69,"59":70,"60":72,"61":73,"62":74,"63":75,"64":77},"asc":{"8":8,"9":9,"10":10,"11":11,"12":12,"13":13,"14":14,"15":15,"16":16,"17":16,"18":17,"19":18,"20":19,"21":20,"22":21,"23":22,"24":23,"25":24,"26":25,"27":26,"28":27,"29":28,"30":29,"31":30,"32":31,"33":31,"34":32,"35":33,"36":34,"37":35,"38":36,"39":37,"40":38,"41":39,"42":40,"43":41,"44":42,"45":43,"46":44,"47":45,"48":46,"49":47,"50":47,"51":48,"52":49,"53":50,"54":51,"55":52,"56":53,"57":54,"58":55,"59":56,"60":57,"61":58,"62":59,"63":60,"64":61},"adv":{" ":34.81,"!":43.89,"\"":52.09,"#":83.8,"$":69.58,"%":95.02,"&":90.28,"'":30.61,"(":47.31,")":47.31,"*":52.3,"+":83.8,",":34.81,"-":41.5,".":34.81,"/":36.53,"0":69.58,"1":69.58,"2":69.58,"3":69.58,"4":69.58,"5":69.58,"6":69.58,"7":69.58,"8":69.58,"9":69.58,":":36.92,";":36.92,"<":83.8,"=":83.8,">":83.8,"?":58.59,"@":100.0,"A":77.59,"B":84.52,"C":79.59,"D":86.72,"E":76.22,"F":71.0,"G":85.41,"H":94.48,"I":46.78,"J":47.31,"K":86.92,"L":70.31,"M":110.69,"N":91.41,"O":87.11,"P":75.2,"Q":87.11,"R":83.11,"S":72.22,"T":74.42,"U":87.2,"V":77.59,"W":112.31,"X":77.59,"Y":71.39,"Z":73.0,"[":47.31,"\\":36.53,"]":47.31,"^":83.8,"_":50.0,"`":50.0,"a":64.8,"b":69.92,"c":60.89,"d":69.92,"e":63.62,"f":43.02,"g":69.92,"h":72.7,"i":37.98,"j":36.19,"k":69.28,"l":37.98,"m":105.81,"n":72.7,"o":66.7,"p":69.92,"q":69.92,"r":52.69,"s":56.3,"t":46.19,"u":72.7,"v":58.11,"w":86.08,"x":59.62,"y":58.11,"z":56.78,"{":64.31,"|":36.38,"}":64.31,"~":83.8}};
+const piExtent = size => PI_SERIF.h[Math.max(8, Math.min(64, Math.round(size)))] ?? Math.round(size * 1.21);
+const piAscent = size => PI_SERIF.asc[Math.max(8, Math.min(64, Math.round(size)))] ?? Math.round(size * 0.94);
+const piAdvance = (ch, size) => (PI_SERIF.adv[ch] ?? 65) * size / 100;
+
 function verticalRun(text, size, bold, tracking, color, serif) {
   // one line laid on its side; the canvas is drawn upright and blitted rotated
+  const chars = [...text];
   const css = `${bold ? 700 : 400} ${size}px ${serif ? SERIF : FONT}`;
   const probe = document.createElement("canvas").getContext("2d");
   probe.font = css;
-  const chars = [...text];
-  const widths = chars.map(ch => probe.measureText(ch).width);
-  const m = probe.measureText("Hg");
-  const asc = Math.round(m.fontBoundingBoxAscent || size * 0.93);
-  const desc = Math.round(m.fontBoundingBoxDescent || size * 0.24);
-  const w = Math.ceil(widths.reduce((a, b) => a + b, 0)) + tracking * Math.max(chars.length - 1, 0) + 4;
-  const c = document.createElement("canvas"); c.width = Math.max(1, w); c.height = asc + desc + 4;
+
+  let advances, across, ascent, drawPx = size;
+  if (serif) {                                  // measure the Pi's face, draw with the stand-in
+    advances = chars.map(ch => piAdvance(ch, size));
+    across = piExtent(size);
+    ascent = piAscent(size);
+    const m = probe.measureText("Hg");
+    const browser = Math.round((m.fontBoundingBoxAscent || size * .93) + (m.fontBoundingBoxDescent || size * .24));
+    if (browser > across) drawPx = Math.max(6, Math.floor(size * across / browser));   // keep it inside the rail
+  } else {
+    advances = chars.map(ch => probe.measureText(ch).width);
+    const m = probe.measureText("Hg");
+    ascent = Math.round(m.fontBoundingBoxAscent || size * 0.93);
+    across = ascent + Math.round(m.fontBoundingBoxDescent || size * 0.24);
+  }
+  const w = Math.floor(advances.reduce((a, b) => a + b, 0)) + tracking * Math.max(chars.length - 1, 0) + 4;
+  const c = document.createElement("canvas"); c.width = Math.max(1, w); c.height = across + 4;
   const g = c.getContext("2d");
-  g.font = css; g.fillStyle = color; g.textBaseline = "alphabetic";
+  g.font = `${bold ? 700 : 400} ${drawPx}px ${serif ? SERIF : FONT}`;
+  g.fillStyle = color; g.textBaseline = "alphabetic";
   let x = 2;
-  chars.forEach((ch, i) => { g.fillText(ch, x, 2 + asc); x += widths[i] + tracking; });
+  chars.forEach((ch, i) => { g.fillText(ch, x, 2 + ascent); x += advances[i] + tracking; });
   return { canvas: c, rotated: true, length: c.width, across: c.height };
 }
 function heartRun(size, color) {
@@ -1052,8 +1074,8 @@ function build() {
   html += layout === "film"
     ? `<div class="hint">The date line takes <code>{date:%m.%d.%Y}</code> and the rest of strftime.
        Sizes are printer dots: 8 dots = 1 mm, 384 dots across, so the two rails and the picture between
-       them have to come to 384. The Pi sets the rail in DejaVu Serif Bold; here it is Noto Serif, close
-       but not identical, so leave a little room rather than filling the rail exactly.</div>`
+       them have to come to 384. The rail type is measured with the Pi's own DejaVu Serif Bold metrics,
+       so the fit shown here is the fit you get; the letter shapes are a web stand-in.</div>`
     : `<div class="hint">Placeholders work in any text: <code>{date:%m/%d/%Y}</code>, <code>{date:%-I:%M %p}</code>,
        <code>{date:%B %-d, %Y}</code>, <code>{txn:04d}</code> (order number), <code>{n}</code> (photo count).
        Sizes are printer dots: 8 dots = 1 mm, 384 dots across. Text on the Pi is DejaVu Sans Mono; here it is Cousine, the same 0.6 em advance, so line breaks and clipping match to within a dot or two.</div>`;
