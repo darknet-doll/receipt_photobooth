@@ -231,7 +231,7 @@
   <div>
     <h1 id="title">Design your receipt!</h1>
     <div class="sub" id="subtitle">Change the text, title, number of photos below, then save and send!</div>
-    <div class="build" id="build" title="When this copy of the page was published. Older than a change you are expecting? You are on a cached copy: hard-reload (⌘⇧R / ctrl-F5), or open it in a private window.">build <b>2026-09-22 00:15 UTC</b></div>
+    <div class="build" id="build" title="When this copy of the page was published. Older than a change you are expecting? You are on a cached copy: hard-reload (⌘⇧R / ctrl-F5), or open it in a private window.">build <b>2026-09-22 00:23 UTC</b></div>
   </div>
   <div class="actions">
     <label style="margin-right:6px">layout
@@ -981,10 +981,24 @@ function makeFilmStrip(photos, s, when) {
     g.fillStyle = screenStyle(g, s.rail_fill); g.fillRect(0, 0, s.width, rows);
   }
 
-  const sprockets = (cx, skip) => {
-    const first = s.end_pad + Math.floor((s.hole_pitch - s.hole_h) / 2);
-    for (let y = first; y < rows - s.end_pad - s.hole_h; y += Math.max(1, s.hole_pitch)) {
-      if (skip && y + s.hole_h > skip[0] && y < skip[1]) continue;
+  // One grid for both rails: the shared phase is what makes the two edges mirror.
+  const grid = [];
+  for (let y = s.end_pad + Math.floor((s.hole_pitch - s.hole_h) / 2);
+       y < rows - s.end_pad - s.hole_h; y += Math.max(1, s.hole_pitch)) grid.push(y);
+
+  const holesFor = (top, length) => {          // holes left around the type, and the clear rows at each end
+    const lo = top - s.text_clear, hi = top + length + s.text_clear;
+    const kept = grid.filter(y => !(y + s.hole_h > lo && y < hi));
+    const above = kept.filter(y => y < top), below = kept.filter(y => y > top + length);
+    return {
+      kept,
+      gapA: above.length ? top - (above[above.length - 1] + s.hole_h) : top - s.end_pad,
+      gapB: (below.length ? below[0] : rows - s.end_pad) - (top + length),
+    };
+  };
+
+  const sprockets = (cx, kept) => {
+    for (const y of (kept || grid)) {
       roundRectPath(g, cx - Math.floor(s.hole_w / 2), y, s.hole_w, s.hole_h, s.hole_radius);
       if (s.hole_stroke) { g.strokeStyle = holeInk; g.lineWidth = s.hole_stroke; g.stroke(); }
       else { g.fillStyle = holeInk; g.fill(); }
@@ -1015,8 +1029,23 @@ function makeFilmStrip(photos, s, when) {
     const room = rows - 2 * s.end_pad;
     if (total > room) throw new Error(`the type runs ${total} dots down a ${room} dot rail: shorten the names, drop the type size, or add a photo`);
     extent = [total, room];
-    let y = Math.max(s.end_pad, Math.floor((rows - total) / 2));
-    const top = y;
+    // Centre the type, then nudge it within half a pitch: the grid is fixed, so where the opening
+    // lands on it decides how much is wasted. Centred exactly, the type can clear a hole at one end
+    // and miss the next by a dot at the other, leaving a two-hole gap below and none above.
+    const natural = Math.max(s.end_pad, Math.floor((rows - total) / 2));
+    const lo = Math.max(s.end_pad, natural - Math.floor(s.hole_pitch / 2));
+    const hi = Math.min(rows - s.end_pad - total, natural + Math.floor(s.hole_pitch / 2));
+    const better = (a, b) => {          // JS compares arrays as strings, so spell the order out
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i];
+      return false;
+    };
+    let top = natural, bestKey = null;
+    for (let t = lo; t <= Math.max(lo, hi); t++) {
+      const h = holesFor(t, total);
+      const key = [-h.kept.length, Math.abs(h.gapA - h.gapB), Math.abs(t - natural)];
+      if (!bestKey || better(key, bestKey)) { bestKey = key; top = t; }
+    }
+    let y = top;
     if (s.text_rail_marks) bars(cx, top - 46, 20, 4);
     for (const r of runs) {
       const x = x0 + Math.floor((x1 - x0 - r.across) / 2);
@@ -1026,7 +1055,7 @@ function makeFilmStrip(photos, s, when) {
     }
     const bottom = y - s.text_gap;
     if (s.text_rail_marks) bars(cx, bottom + 20, 14, 3);
-    if (s.text_rail_sprockets) sprockets(cx, [top - s.text_clear, bottom + s.text_clear]);
+    if (s.text_rail_sprockets) sprockets(cx, holesFor(top, bottom - top).kept);
   };
   rail(0, s.rail_left, s.left_style);
   rail(s.width - s.rail_right, s.width, s.right_style);
