@@ -231,7 +231,7 @@
   <div>
     <h1 id="title">Design your receipt!</h1>
     <div class="sub" id="subtitle">Change the text, title, number of photos below, then save and send!</div>
-    <div class="build" id="build" title="When this copy of the page was published. Older than a change you are expecting? You are on a cached copy: hard-reload (⌘⇧R / ctrl-F5), or open it in a private window.">build <b>2026-09-22 00:07 UTC</b></div>
+    <div class="build" id="build" title="When this copy of the page was published. Older than a change you are expecting? You are on a cached copy: hard-reload (⌘⇧R / ctrl-F5), or open it in a private window.">build <b>2026-09-22 00:15 UTC</b></div>
   </div>
   <div class="actions">
     <label style="margin-right:6px">layout
@@ -833,7 +833,7 @@ const SERIF = '"Noto Serif", "DejaVu Serif", Georgia, serif';
 const FILM = {
   width: WIDTH, rail_left: 48, rail_right: 48,
   left_style: "sprockets", right_style: "text",
-  frame_inset: 8, frame_gap: 14, frame_radius: 16, frame_aspect: [1, 1], frame_keyline: 2,
+  frame_inset: 8, frame_gap: 14, frame_radius: 16, frame_aspect: [4, 3], frame_keyline: 2,
   end_pad: 22, base: "outline", rail_fill: "solid",
   hole_w: 22, hole_h: 18, hole_radius: 5, hole_pitch: 34, hole_stroke: 0,
   ornament: "heart", ornament_size: 26,
@@ -872,6 +872,14 @@ function screenStyle(g, fill) {                  // the film base: solid, or a d
 // made this page refuse a rail that the printer accepts. Shapes below are a stand-in; the
 // FOOTPRINT is the Pi's.
 const PI_SERIF = {"h":{"8":10,"9":12,"10":13,"11":14,"12":15,"13":17,"14":18,"15":19,"16":20,"17":21,"18":22,"19":23,"20":24,"21":25,"22":27,"23":28,"24":29,"25":30,"26":32,"27":33,"28":34,"29":35,"30":37,"31":38,"32":39,"33":39,"34":41,"35":42,"36":43,"37":44,"38":45,"39":47,"40":48,"41":49,"42":50,"43":52,"44":53,"45":54,"46":55,"47":57,"48":58,"49":59,"50":59,"51":61,"52":62,"53":63,"54":64,"55":65,"56":67,"57":68,"58":69,"59":70,"60":72,"61":73,"62":74,"63":75,"64":77},"asc":{"8":8,"9":9,"10":10,"11":11,"12":12,"13":13,"14":14,"15":15,"16":16,"17":16,"18":17,"19":18,"20":19,"21":20,"22":21,"23":22,"24":23,"25":24,"26":25,"27":26,"28":27,"29":28,"30":29,"31":30,"32":31,"33":31,"34":32,"35":33,"36":34,"37":35,"38":36,"39":37,"40":38,"41":39,"42":40,"43":41,"44":42,"45":43,"46":44,"47":45,"48":46,"49":47,"50":47,"51":48,"52":49,"53":50,"54":51,"55":52,"56":53,"57":54,"58":55,"59":56,"60":57,"61":58,"62":59,"63":60,"64":61},"adv":{" ":34.81,"!":43.89,"\"":52.09,"#":83.8,"$":69.58,"%":95.02,"&":90.28,"'":30.61,"(":47.31,")":47.31,"*":52.3,"+":83.8,",":34.81,"-":41.5,".":34.81,"/":36.53,"0":69.58,"1":69.58,"2":69.58,"3":69.58,"4":69.58,"5":69.58,"6":69.58,"7":69.58,"8":69.58,"9":69.58,":":36.92,";":36.92,"<":83.8,"=":83.8,">":83.8,"?":58.59,"@":100.0,"A":77.59,"B":84.52,"C":79.59,"D":86.72,"E":76.22,"F":71.0,"G":85.41,"H":94.48,"I":46.78,"J":47.31,"K":86.92,"L":70.31,"M":110.69,"N":91.41,"O":87.11,"P":75.2,"Q":87.11,"R":83.11,"S":72.22,"T":74.42,"U":87.2,"V":77.59,"W":112.31,"X":77.59,"Y":71.39,"Z":73.0,"[":47.31,"\\":36.53,"]":47.31,"^":83.8,"_":50.0,"`":50.0,"a":64.8,"b":69.92,"c":60.89,"d":69.92,"e":63.62,"f":43.02,"g":69.92,"h":72.7,"i":37.98,"j":36.19,"k":69.28,"l":37.98,"m":105.81,"n":72.7,"o":66.7,"p":69.92,"q":69.92,"r":52.69,"s":56.3,"t":46.19,"u":72.7,"v":58.11,"w":86.08,"x":59.62,"y":58.11,"z":56.78,"{":64.31,"|":36.38,"}":64.31,"~":83.8}};
+// DejaVu Serif Bold's coverage, from fontconfig on the Pi. A symbol inside it is set in the same
+// face as the names; one outside it is drawn by whatever other font on the Pi has it, at a
+// different weight; one in neither cannot print at all.
+const PI_SERIF_CHARS = charsetRanges("20-7e a0-2cd 2d0-2d3 2d6-2de 2e0-2e9 2ec 2ee-2f0 2f3 2f7 300-33f 343 34f 358 360-361 370-377 37a-37f 384-38a 38c 38e-3a1 3a3-3e1 3f0-45f 462-465 46a-46d 470-477 48c-48d 490-49b 49e-4a7 4aa-4b7 4ba-4bb 4c0-4c4 4c7-4c8 4cb-4cc 4cf-4f9 510-515 51a-51d 531-556 559-55f 561-587 589-58a e3f 10a0-10c5 10d0-10fc 1d00-1d6b 1d77-1d78 1d7b-1d7f 1d85 1d9b-1dbf 1dc4-1dc9 1e00-1efb 1f00-1f15 1f18-1f1d 1f20-1f45 1f48-1f4d 1f50-1f57 1f59 1f5b 1f5d 1f5f-1f7d 1f80-1fb4 1fb6-1fc4 1fc6-1fd3 1fd6-1fdb 1fdd-1fef 1ff2-1ff4 1ff6-1ffe 2000-2026 202a-203a 203c-203e 2042 2044-2049 204b-204f 2051-2053 2057 205f-2064 206a-2071 2074-208e 2090-209c 20a6 20ac 20af 20b1 20b4-20b5 20b8-20ba 20bd 2103 2109 210e-210f 2116 2122 2126-2127 212a-212b 2132 2141-2144 214b 214e 2150-2185 2189 2190-2200 2202-2204 2206-2209 220b-220c 220f-2215 2217-2220 2223-222d 2238-223d 2242-2243 2248 2250-2255 2260-2261 2264-2265 2282-2287 228c-22af 22c4-22c5 2302 2308-230b 2310-2311 2318-2319 2320-2321 2325 2328 237d 239b-23ae 23cf 2423 2500-2600 2638-263c 263f-2647 2660-2667 2669-266f 27a1 27c5-27c6 27e0 27e8-27e9 27f0-297f 29eb 2a0c-2a0e 2a2f 2a6a-2a6b 2b00-2b1a 2c60-2c61 2c63-2c64 2c67-2c73 2c75-2c77 2c79-2c7f 2d00-2d25 2e18 2e1f 2e22-2e25 2e2e a644-a647 a650-a651 a654-a657 a698-a699 a708-a716 a71b-a71f a726-a741 a746-a747 a74a-a74b a74e-a74f a768-a769 a77b-a77c a780-a787 a78b-a78d a790-a791 a7aa a7f8-a7ff f400-f426 f428 f6c5 f6d1 f6d4 fb00-fb06 fe00-fe0f fff9-fffd 1d400-1d433 1d6a8-1d6e1 1d7ca-1d7cb 1d7ce-1d7d7");
+// What the RAIL can actually reach: the serif plus the fallback faces booth.receipt tries, in
+// that order — not every font fontconfig knows. The wider list promised characters the renderer
+// then refused (U+103A0 among them), which is a false yes on the one question this page answers.
+const PI_RAIL_CHARS = charsetRanges("20-7e a0-377 37a-37f 384-38a 38c 38e-3a1 3a3-52f 531-556 559-55f 561-587 589-58a 58f 591-5c7 5d0-5ea 5f0-5f4 600-61c 61e-70d 70f-74a 74d-7b1 7c0-7e7 7eb-7f5 7f8-7fa 8a0-8b4 8b6-8bd 8d3 8d5-8d9 8e0-983 985-98c 98f-990 993-9a8 9aa-9b0 9b2 9b6-9b9 9bc-9c4 9c7-9c8 9cb-9ce 9d7 9dc-9dd 9df-9e3 9e6-9fd a01-a03 a05-a0a a0f-a10 a13-a28 a2a-a30 a32-a33 a35-a36 a38-a39 a3c a3e-a42 a47-a48 a4b-a4d a51 a59-a5c a5e a66-a75 a81-a83 a85-a8d a8f-a91 a93-aa8 aaa-ab0 ab2-ab3 ab5-ab9 abc-ac5 ac7-ac9 acb-acd ad0 ae0-ae3 ae6-af1 af9-aff b01-b03 b05-b0c b0f-b10 b13-b28 b2a-b30 b32-b33 b35-b39 b3c-b44 b47-b48 b4b-b4d b56-b57 b5c-b5d b5f-b63 b66-b77 b82-b83 b85-b8a b8e-b90 b92-b95 b99-b9a b9c b9e-b9f ba3-ba4 ba8-baa bae-bb9 bbe-bc2 bc6-bc8 bca-bcd bd0 bd7 be6-bfa c80-c83 c85-c8c c8e-c90 c92-ca8 caa-cb3 cb5-cb9 cbc-cc4 cc6-cc8 cca-ccd cd5-cd6 cde ce0-ce3 ce6-cef cf1-cf2 d00-d03 d05-d0c d0e-d10 d12-d44 d46-d48 d4a-d4f d54-d63 d66-d7f d82-d83 d85-d96 d9a-db1 db3-dbb dbd dc0-dc6 dca dcf-dd4 dd6 dd8-ddf de6-def df2-df4 e01-e3a e3f-e5b e81-e82 e84 e87-e88 e8a e8d e94-e97 e99-e9f ea1-ea3 ea5 ea7 eaa-eab ead-eb9 ebb-ebd ec0-ec4 ec6 ec8-ecd ed0-ed9 edc-edd 10a0-10c5 10d0-1112 1114-1115 111c-111e 1120 1122-1123 1127 1129 112b-112f 1132 1136 1140 1147 114c 1157-1159 1184-1185 1188 1191-1192 1194 119e 11a1 11a8-11c2 11c7-11c8 11cc 11ce 11d3 11d7 11d9 11dc-11dd 11df 11e2 11e6-11e8 11ea-11eb 11ee 11f0-11f2 11f4 11f9 1200-1248 124a-124d 1250-1256 1258 125a-125d 1260-1288 128a-128d 1290-12b0 12b2-12b5 12b8-12be 12c0 12c2-12c5 12c8-12d6 12d8-1310 1312-1315 1318-135a 135d-137c 13a0-13f5 13f8-13fd 1400-169c 1720-1736 18b0-18f5 1950-196d 1970-1974 1a00-1a1b 1a1e-1a1f 1ab0-1ac0 1c80-1c88 1cd0-1cfa 1d00-1df9 1dfb-1f15 1f18-1f1d 1f20-1f45 1f48-1f4d 1f50-1f57 1f59 1f5b 1f5d 1f5f-1f7d 1f80-1fb4 1fb6-1fc4 1fc6-1fd3 1fd6-1fdb 1fdd-1fef 1ff2-1ff4 1ff6-1ffe 2000-2064 2066-2071 2074-208e 2090-209c 20a0-20bf 20d0-20f0 2100-218b 2190-2426 2460-26cc 26d2 26d4 26d6-26d7 26da-26db 26dd 26e2-26e8 26ec-26f0 26f6 26ff-2b4c 2b50-2b59 2b60-2b69 2b80-2b8b 2b95 2b98-2bb7 2bb9 2bbd-2bc8 2bca-2bcf 2bd1 2bec-2bef 2c00-2c2e 2c30-2c5e 2c60-2cb1 2cc0-2cc1 2cc8-2ccb 2cdc-2cea 2cef-2cf1 2cf9-2d25 2d30-2d67 2d6f-2d70 2d7f 2de0-2e0d 2e0f-2e18 2e1a-2e3d 2e40-2e4c 2e4e 3000-3003 3005-3007 300a-3019 301c-301f 3021-3029 3041-3094 3099-309e 30a0-30f6 30fb-30fe 3105-3129 3131-318e 3220-3229 3231-3232 3239 3251-325f 327f 32a3-32a8 32b1-32bf 3303 330d 3314 3318 3322-3323 3326-3327 332b 3336 333b 3349-334a 334d 3351 3357 337b-337e 3380-3384 3388-33ca 33cd-33d3 33d5-33d6 33d8 33db-33dd 3400-4db5 4dc0-9fa5 a4d0-a62b a640-a69f a700-a76b a76e-a770 a779-a799 a7a0-a7b2 a7b4-a7b7 a7f2-a7f4 a7f7-a7ff a830-a836 a8e0-a8ff ab64-ab65 ab69 ab70-abbf ac00 d7a2-d7a3 ef00-ef19 f000-f003 f400-f426 f428-f441 f6c5 f6d1 f6d4 f900-fa2d fb00-fb06 fb13-fb17 fb1d-fb36 fb38-fb3c fb3e fb40-fb41 fb43-fb44 fb46-fbc1 fbd3-fbe9 fbfc-fbff fc02 fc08 fc0e fc12 fc4e fc5e-fc65 fc67-fc6b fc6d-fc71 fc73-fc77 fc79-fc7b fc8a-fc8b fc8d-fc8f fc91-fc92 fc94-fc96 fcf2-fcf4 fcfb-fcfe fd05-fd08 fd17-fd1a fd21-fd24 fd3c-fd3f fdf2 fdfc fe00-fe19 fe20-fe31 fe33-fe46 fe49-fe52 fe54-fe57 fe59-fe66 fe68-fe6b fe70-fe74 fe76-fefc feff ff01-ff5e ff61-ff9f ffe0-ffe6 fff9-fffd 10143-10147 10280-1029c 10300-1031e 10320-10323 10330-1034a 10380-1039d 1039f-103c3 103c8-103d5 10400 10428 1044d-1044f 10480-1049d 104a0-104a9 10783-10784 10792 10796 107a5 107aa 107b2 10900-1091b 1091f 1d000-1d0f5 1d100-1d126 1d129-1d1dd 1d300-1d356 1d400-1d454 1d456-1d49c 1d49e-1d49f 1d4a2 1d4a5-1d4a6 1d4a9-1d4ac 1d4ae-1d4b9 1d4bb 1d4bd-1d4c3 1d4c5-1d505 1d507-1d50a 1d50d-1d514 1d516-1d51c 1d51e-1d539 1d53b-1d53e 1d540-1d544 1d546 1d54a-1d550 1d552-1d6a5 1d6a8-1d7cb 1d7ce-1d7ff 1ee00-1ee03 1ee05-1ee1f 1ee21-1ee22 1ee24 1ee27 1ee29-1ee32 1ee34-1ee37 1ee39 1ee3b 1ee61-1ee62 1ee64 1ee67-1ee6a 1ee6c-1ee72 1ee74-1ee77 1ee79-1ee7c 1ee7e 1f000-1f02b 1f030-1f093 1f0a0-1f0ae 1f0b1-1f0be 1f0c1-1f0cf 1f0d1-1f0df 1f100-1f10c 1f110-1f16c 1f170-1f19a 1f1e6-1f1ff 1f300 1f310-1f318 1f31e 1f322 1f340 1f386 1f394 1f39c-1f39d 1f3b6 1f3fb-1f3ff 1f42d-1f42e 1f431 1f435 1f446-1f449 1f480 1f494-1f495 1f497-1f498 1f4a1 1f4a3-1f4a7 1f4b2 1f4b4-1f4b7 1f4de 1f507-1f50a 1f512-1f513 1f519-1f51d 1f51f-1f520 1f524-1f525 1f52f 1f53e-1f549 1f550-1f56a 1f56f 1f571 1f57b 1f57d-1f57f 1f594 1f597-1f59e 1f5a0-1f5a3 1f5af-1f5b1 1f5b5 1f5da-1f5db 1f5f2 1f5f4-1f5f8 1f600-1f623 1f625-1f62b 1f62d-1f640 1f643-1f644 1f66c-1f66f 1f674 1f676-1f67f 1f6e7 1f6ea 1f780-1f7ae 1f900-1f907 1f910 1f913");
 const piExtent = size => PI_SERIF.h[Math.max(8, Math.min(64, Math.round(size)))] ?? Math.round(size * 1.21);
 const piAscent = size => PI_SERIF.asc[Math.max(8, Math.min(64, Math.round(size)))] ?? Math.round(size * 0.94);
 const piAdvance = (ch, size) => (PI_SERIF.adv[ch] ?? 65) * size / 100;
@@ -906,6 +914,32 @@ function verticalRun(text, size, bold, tracking, color, serif) {
   chars.forEach((ch, i) => { g.fillText(ch, x, 2 + ascent); x += advances[i] + tracking; });
   return { canvas: c, rotated: true, length: c.width, across: c.height };
 }
+function symbolRun(text, size, color, serif) {
+  // any character, drawn upright like the heart. Where the Pi gets it from is reported, not guessed.
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    // booth.receipt.font_for drops these by category before it ever looks at a charset: a lone
+    // combining mark or a format character has no shape of its own and prints as a box.
+    if (/[\p{M}\p{Cf}]/u.test(ch))
+      throw new Error(`U+${cp.toString(16).toUpperCase()} is a combining or format character, not a symbol — it has no shape to print`);
+    if (!inRanges(cp, PI_RAIL_CHARS))
+      throw new Error(`no font the rail uses on the Pi has ${ch} (U+${cp.toString(16).toUpperCase()}) — pick another symbol, or type "heart", which is drawn rather than set`);
+  }
+  const box = piExtent(size) + 4;
+  const css = `700 ${size}px ${serif ? SERIF : FONT}`;
+  const probe = document.createElement("canvas").getContext("2d");
+  probe.font = css;
+  const w = Math.ceil(probe.measureText(text).width) + 4;
+  const c = document.createElement("canvas"); c.width = Math.max(1, w); c.height = box;
+  const g = c.getContext("2d");
+  g.font = css; g.fillStyle = color; g.textBaseline = "alphabetic";
+  g.fillText(text, 2, 2 + piAscent(size));
+  return { canvas: c, rotated: false, length: c.height, across: c.width };
+}
+function fallbackSymbols(text) {          // which characters the Pi draws in another face
+  return [...(text || "")].filter(ch => !inRanges(ch.codePointAt(0), PI_SERIF_CHARS));
+}
+
 function heartRun(size, color) {
   // upright in the strip's frame, deliberately not turned with the type (see film.py)
   const s4 = size * 4, r = Math.floor(s4 / 4);
@@ -970,7 +1004,9 @@ function makeFilmStrip(photos, s, when) {
     if (style !== "text") return;
     const runs = [];
     if (s.names) runs.push(verticalRun(s.names, s.name_size, true, s.name_tracking, holeInk, s.serif));
-    if (s.ornament === "heart" && runs.length) runs.push(heartRun(s.ornament_size, holeInk));
+    if (s.ornament && runs.length)
+      runs.push(s.ornament === "heart" ? heartRun(s.ornament_size, holeInk)
+                                       : symbolRun(s.ornament, s.ornament_size, holeInk, s.serif));
     if (s.date_format) runs.push(verticalRun(fill(s.date_format, { date: when }), s.date_size, true, s.name_tracking, holeInk, s.serif));
     if (!runs.length) return;
     const widest = Math.max(...runs.map(r => r.across));
@@ -1032,7 +1068,7 @@ const FILM_FIELDS = [
   { group: "The rail" },
   { k: "names", t: "text", label: "Names up the rail", small: "set on its side; the readout says how much room is left" },
   { k: "date_format", t: "text", label: "Date line", small: "blank for none" },
-  { row: [{ k: "ornament", t: "boolstr", on: "heart", label: "Heart between them" }, { k: "serif", t: "bool", label: "Serif type" }] },
+  { row: [{ k: "ornament", t: "text", label: "Symbol between them", small: "blank for none; <b>heart</b> is drawn, or paste one: ♥ ★ ✿ ❀ ✦ ♪ ☀" }, { k: "serif", t: "bool", label: "Serif type" }] },
   { row: [{ k: "name_size", t: "num", label: "Name size (dots)" }, { k: "date_size", t: "num", label: "Date size (dots)" }] },
   { row3: [{ k: "name_tracking", t: "num", label: "Letter spacing" }, { k: "text_gap", t: "num", label: "Gap between runs" }, { k: "text_clear", t: "num", label: "Clear of the holes" }] },
   { row: [{ k: "text_rail_sprockets", t: "bool", label: "Perforate the text rail too" }, { k: "text_rail_marks", t: "bool", label: "Edge bars around the type" }] },
@@ -1048,7 +1084,7 @@ const FILM_FIELDS = [
   { row3: [{ k: "rail_left", t: "num", label: "Left rail width" }, { k: "rail_right", t: "num", label: "Right rail width" }, { k: "ornament_size", t: "num", label: "Heart size" }] },
   { row: [{ k: "dither", t: "bool", label: "Dither photos (Floyd–Steinberg)" }, { k: "caption", t: "text", label: "Caption under the film", small: "blank for none" }] },
 ];
-const FILM_NULLABLE = new Set(["caption", "date_format"]);
+const FILM_NULLABLE = new Set(["caption", "date_format", "ornament"]);
 
 // ---- which layout is being edited ------------------------------------------------
 let layout = "receipt";
@@ -1194,8 +1230,10 @@ function render() {
   const st = $("status");
   if (layout === "film" && last.extent) {
     const [run, room] = last.extent;
-    st.textContent = `The rail type runs ${run} of ${room} dots; ${room - run} to spare.`;
-    st.className = room - run < 60 ? "warn" : "";
+    const odd = fallbackSymbols(s.ornament === "heart" ? "" : s.ornament);
+    st.textContent = `The rail type runs ${run} of ${room} dots; ${room - run} to spare.`
+      + (odd.length ? `  ${odd.join(" ")} is not in the rail's serif: the Pi draws it with another font, so it prints at a different weight.` : "");
+    st.className = (room - run < 60 || odd.length) ? "warn" : "";
     renderSets();
     return;
   }
