@@ -332,6 +332,7 @@
     <span>USB <b>0fe6:811e</b> → /dev/usb/lp0</span>
     <span>roll ≈ <b>10 m</b>, ≤ 30 mm dia</span>
     <span>DC <b>5 – 9 V</b>, ≥ 1.5 A while printing</span>
+    <span id="build" title="When this copy of the page was published. If it is older than a change you expect, you are on a cached copy: hard-reload (⌘⇧R / ctrl-F5).">build <b>2026-09-22 00:02 UTC</b></span>
   </div>
     </div>
   </aside>
@@ -1176,7 +1177,8 @@ function render() {
     try { last = makeFilmStrip(photos, s, new Date()); }
     catch (e) {                                   // refuse rather than print a cropped letter
       const st = $("status");
-      st.textContent = `This will not print: ${e.message}`; st.className = "warn";
+      st.textContent = `This will not print: ${e.message}  (the strip below is the last one that did)`;
+      st.className = "warn";
       return;
     }
   } else {
