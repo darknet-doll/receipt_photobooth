@@ -1,56 +1,48 @@
 # Receipt Photobooth
 
-A dot-for-dot simulator of the receipt the photobooth prints on its GP-58 thermal head —
-384 dots a line, 8 dots a millimetre, 48 mm of ink on 57 mm paper. Design a receipt here and
-what you see is what the paper gets.
+A Raspberry Pi 5 photobooth that prints on a thermal receipt printer. Guests tap the touchscreen, take
+three photos, and walk away with a receipt-tape keepsake.
 
-**Open it:** https://darknet-doll.github.io/receipt_photobooth/
+![The enclosure, front](hardware/images/front.png)
 
-## Designing a receipt
+This repo has everything to build one:
 
-No account, no sign-in, nothing to install. Just open the link.
+| Folder | What's in it |
+|---|---|
+| [`hardware/`](hardware/) | STL and 3MF files for the plain enclosure, the parts list, and how it goes together |
+| [`software/`](software/) | the booth app (Python), the Pi setup, and a simulator that runs it on a laptop |
+| [`docs/`](docs/) | the **Tape Bench**, a browser designer for the receipt (also live at the link below) |
+| `sets/` | example receipt designs saved from the Tape Bench |
 
-1. The **Iterations** list on the left already holds the saved receipts — click one to load it.
-2. Change whatever you like: the shop name, the line under each photo, the rules, the totals,
-   the type sizes. The preview redraws as you type.
-3. Press **Send my receipt**. That's it — it goes straight to darknetdoll, who puts it on the
-   booth.
+## Design a receipt in the browser
 
-You can keep tweaking and send again as many times as you like. Your work also stays in your
-own browser, so you can close the tab and pick it up later.
+**https://darknet-doll.github.io/receipt_photobooth/**
 
-### Picking characters
+A dot-for-dot simulator of the printer: 384 dots a line, 8 dots a millimetre, 48 mm of ink on 57 mm paper.
+Change the shop name, the lines under each photo, the rules, the totals and the type sizes; the preview
+redraws as you type. When you like it, press **Download receipt.json** and copy that file to
+`~/photobooth/receipt.json` on your booth. The booth re-reads it at the start of every session, so there is
+no restart.
 
-The palette down the left is every glyph the booth can actually print — each one was rendered on
-the printer itself and thresholded like a real print, so what you see is what the paper gets.
-Click a text field, then click a character to drop it in. Characters from outside that palette
-may come out as an empty box on paper. A dashed box marked **16** means the glyph goes faint at
-the small-text size — use it on a bigger line instead.
+The character palette on the left is every glyph the printer can actually print. A dashed box marked
+**16** means that glyph goes faint at the small text size, so use it on a bigger line.
 
-## For the booth owner
+## Build one
 
-The page is one file, `index.html`, and it behaves differently depending on where it is opened:
+1. **Parts:** see the parts list in [`hardware/README.md`](hardware/README.md). In short: a Raspberry Pi 5,
+   a 5" HDMI touchscreen, a Camera Module 3, a 58 mm USB thermal printer and a USB-C power bank.
+2. **Print:** the tub, the lid, the Pi bridge plate and two screen sleeves, from `hardware/stl/`.
+3. **Assemble:** follow [`hardware/README.md`](hardware/README.md).
+4. **Software:** follow [`software/README.md`](software/README.md). Flash Raspberry Pi OS, copy `software/`
+   over, run one install script, and tap the Photobooth icon.
 
-| Opened from | Saving goes to |
-| --- | --- |
-| GitHub Pages | a Google Form, collected in its linked Sheet |
-| GitHub Pages with `?github=1` | a commit in this repo, under `sets/` |
-| the Claude artifact | the artifact's shared database |
-| a local `file://` copy | the browser, plus **Send to booth** → Receipt Studio on the Pi |
+You don't need any hardware to try it: `software/tools/simulate.sh` runs the real booth UI in a window on
+a Mac or PC, with a synthetic camera and the receipt saved as a PNG.
 
-`config.json` names the Google Form the Send button posts to. Both values are public on purpose:
-a form response endpoint only accepts submissions and returns nothing, so unlike a GitHub or
-Airtable token there is no secret in the page to steal. Clear the values and the Send button
-simply stays hidden. Responses collect in the form's linked Sheet.
+## Licence
 
-The source of truth is `software/tools/tape_bench.html` in the Photobooth project; `index.html`
-here is a copy. Don't edit it by hand — run `software/tools/deploy_bench_site.sh`, which
-re-copies it and pushes.
+- Code (`software/`, `docs/`): [MIT](LICENSE)
+- Enclosure models (`hardware/`): [CC BY-NC 4.0](hardware/LICENSE). Build your own and remix it, but don't
+  sell the enclosure.
 
-To put a received receipt on the booth, write its `settings` object to `~/photobooth/receipt.json`
-on the Pi. The booth re-reads that file at the start of every session, so no restart is needed.
-
-## Note on what is public
-
-This repo is public, so anything committed to `sets/` is world-readable. Keep names, addresses
-and anything personal out of the receipts saved here.
+Made by darknetdoll.

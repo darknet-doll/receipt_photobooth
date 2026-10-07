@@ -1,0 +1,6 @@
+# For the simulator on a Mac/PC (software/tools/simulate.py). On the Pi everything except
+# OpenCV ships with Raspberry Pi OS; install that with: sudo apt install python3-opencv
+pygame
+pillow
+numpy
+opencv-python-headless   # optional: only tools/face_booth_sim.py uses it
